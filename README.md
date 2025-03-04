@@ -92,3 +92,39 @@ yarn build
 ```
 
 The production build artifacts will be output to the `dist/` directory.
+
+## Running with Docker
+
+You can also run the application using Docker. Use the multi-stage Dockerfile provided in the project.
+
+1. **Build the Docker image:**
+
+   ```bash
+   docker build -t tic-tac-toe .
+   ```
+
+2. **Run the Docker container:**
+
+   ```bash
+   docker run -p 80:80 tic-tac-toe
+   ```
+
+Your application should now be accessible at [http://localhost](http://localhost).
+
+## Running with Docker Compose
+
+If you prefer using Docker Compose, you can use the provided `docker-compose.yml` file:
+
+1. **Build and start the service:**
+
+   ```bash
+   docker-compose up --build
+   ```
+
+2. **Run in detached mode:**
+
+   ```bash
+   docker-compose up -d --build
+   ```
+
+Your application will be available at [http://localhost](http://localhost).
