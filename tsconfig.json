@@ -1,5 +1,9 @@
 {
+  // This configuration does not include any direct files.
   "files": [],
+
+  // Define project references for composite builds.
+  // This allows you to structure your TypeScript project into multiple sub-projects.
   "references": [
     { "path": "./tsconfig.app.json" },
     { "path": "./tsconfig.node.json" }
