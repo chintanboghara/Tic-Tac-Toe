@@ -2,28 +2,27 @@
 
 A modern implementation of the classic Tic Tac Toe game built with React, TypeScript, and Tailwind CSS.
 
-![image](https://github.com/user-attachments/assets/5b2813a5-f493-4665-8964-77359b5be93a)
-
+![Tic Tac Toe Screenshot](https://github.com/user-attachments/assets/5b2813a5-f493-4665-8964-77359b5be93a)
 
 ## Features
 
-- 🎮 Fully functional Tic Tac Toe game
-- 📊 Score tracking for X, O, and draws
-- 📜 Game history with timestamps
-- 🏆 Highlights winning combinations
-- 🔄 Reset game and statistics
-- 📱 Responsive design for all devices
+- **Fully Functional Game:** Enjoy a classic Tic Tac Toe experience.
+- **Score Tracking:** Monitor wins for X, O, and draws.
+- **Game History:** View past game outcomes with timestamps.
+- **Winning Highlights:** Winning combinations are visually emphasized.
+- **Reset Options:** Easily reset the game board and statistics.
+- **Responsive Design:** Optimized for all devices.
 
 ## Technologies Used
 
-- React 18
-- TypeScript
-- Tailwind CSS
-- Lucide React for icons
+- **React 18**
+- **TypeScript**
+- **Tailwind CSS**
+- **Lucide React** for icons
 
 ## Project Structure
 
-```
+```plaintext
 src/
 ├── components/
 │   ├── Board.tsx       # Game board component
@@ -33,49 +32,54 @@ src/
 ├── utils/
 │   └── gameLogic.ts    # Game logic utilities
 ├── App.tsx             # Main application component
-└── main.tsx           # Entry point
+└── main.tsx            # Entry point
 ```
 
 ## Game Logic
 
-The game implements the following rules:
+The game follows these rules:
 
-1. X goes first, followed by O
-2. The first player to get 3 of their marks in a row (horizontally, vertically, or diagonally) wins
-3. If all 9 squares are filled and no player has 3 marks in a row, the game is a draw
-4. Winning combinations are highlighted
-5. Game statistics are tracked and displayed
+1. **First Move:** X goes first, followed by O.
+2. **Win Condition:** The first player to achieve 3 marks in a row (horizontally, vertically, or diagonally) wins.
+3. **Draw:** If all 9 squares are filled without a winner, the game ends in a draw.
+4. **Highlighting:** Winning combinations are visually highlighted.
+5. **Statistics:** Game outcomes and statistics are tracked and displayed.
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js (v14 or higher)
+- [Node.js](https://nodejs.org/) (v14 or higher)
 - npm or yarn
 
 ### Installation
 
-1. Clone the repository:
+1. **Clone the repository:**
+
    ```bash
    git clone https://github.com/chintanboghara/Tic-Tac-Toe.git
    cd Tic-Tac-Toe
    ```
 
-2. Install dependencies:
+2. **Install dependencies:**
+
    ```bash
    npm install
    # or
    yarn
    ```
 
-3. Start the development server:
+3. **Start the development server:**
+
    ```bash
    npm run dev
    # or
    yarn dev
    ```
 
-4. Open your browser and navigate to `http://localhost:5173`
+4. **Open your browser:**
+
+   Navigate to [http://localhost:5173](http://localhost:5173)
 
 ## Building for Production
 
@@ -87,5 +91,4 @@ npm run build
 yarn build
 ```
 
-The build artifacts will be stored in the `dist/` directory.
-
+The production build artifacts will be output to the `dist/` directory.
