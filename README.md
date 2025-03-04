@@ -1,3 +1,5 @@
+[![Docker Image CI](https://github.com/chintanboghara/Tic-Tac-Toe/actions/workflows/docker-image.yml/badge.svg?branch=main)](https://github.com/chintanboghara/Tic-Tac-Toe/actions/workflows/docker-image.yml)
+
 # Tic Tac Toe Game
 
 A modern implementation of the classic Tic Tac Toe game built with React, TypeScript, and Tailwind CSS.
