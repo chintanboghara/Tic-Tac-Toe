@@ -57,8 +57,8 @@ The game implements the following rules:
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/tic-tac-toe.git
-   cd tic-tac-toe
+   git clone https://github.com/chintanboghara/Tic-Tac-Toe.git
+   cd Tic-Tac-Toe
    ```
 
 2. Install dependencies:
