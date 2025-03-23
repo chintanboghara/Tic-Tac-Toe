@@ -3,8 +3,6 @@
 
 A modern implementation of the classic Tic Tac Toe game built with React, TypeScript, and Tailwind CSS.
 
-![Tic Tac Toe Screenshot](https://github.com/user-attachments/assets/5b2813a5-f493-4665-8964-77359b5be93a)
-
 ## Features
 
 - **Fully Functional Game:** Enjoy a classic Tic Tac Toe experience.
