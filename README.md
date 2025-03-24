@@ -94,7 +94,7 @@ The production build artifacts will be output to the `dist/` directory.
 
 ## Running with Docker
 
-You can also run the application using Docker. Use the multi-stage Dockerfile provided in the project.
+Run the application using Docker. Use the multi-stage Dockerfile provided in the project.
 
 1. **Build the Docker image:**
 
@@ -108,11 +108,11 @@ You can also run the application using Docker. Use the multi-stage Dockerfile pr
    docker run -p 80:80 tic-tac-toe
    ```
 
-Your application should now be accessible at [http://localhost](http://localhost).
+The application should now be accessible at [http://localhost](http://localhost).
 
 ## Running with Docker Compose
 
-If you prefer using Docker Compose, you can use the provided `docker-compose.yml` file:
+Using Docker Compose, you can use the provided `docker-compose.yml` file:
 
 1. **Build and start the service:**
 
@@ -125,5 +125,3 @@ If you prefer using Docker Compose, you can use the provided `docker-compose.yml
    ```bash
    docker-compose up -d --build
    ```
-
-Your application will be available at [http://localhost](http://localhost).
