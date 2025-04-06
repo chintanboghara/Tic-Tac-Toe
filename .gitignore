@@ -43,3 +43,10 @@ dist-ssr/
 
 # ----- OS Generated Files -----
 Thumbs.db
+
+# Terraform files
+*.tfvars
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
