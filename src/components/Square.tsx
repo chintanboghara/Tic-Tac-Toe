@@ -4,9 +4,10 @@ interface SquareProps {
   value: string | null;
   onClick: () => void;
   isWinningSquare: boolean;
+  isInteractive: boolean; // New prop
 }
 
-const Square: React.FC<SquareProps> = ({ value, onClick, isWinningSquare }) => {
+const Square: React.FC<SquareProps> = ({ value, onClick, isWinningSquare, isInteractive }) => {
   const [animatedValue, setAnimatedValue] = useState<string | null>(null);
 
   useEffect(() => {
@@ -24,8 +25,11 @@ const Square: React.FC<SquareProps> = ({ value, onClick, isWinningSquare }) => {
     if (isWinningSquare) {
       classes += ' bg-green-200 text-green-800 dark:bg-green-700 dark:text-green-100 border-2 border-green-500 dark:border-green-500';
       classes += ' animate-pulse-bg-winner'; // Add the winning animation class
-    } else if (!animatedValue) { // Use animatedValue for styling empty
-      classes += ' bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 cursor-pointer';
+    } else if (!animatedValue) { // Empty square
+      classes += ' bg-gray-100 dark:bg-slate-700';
+      if (isInteractive) { // Only add hover and cursor if interactive
+        classes += ' hover:bg-gray-200 dark:hover:bg-slate-600 cursor-pointer';
+      }
     } else if (animatedValue === 'X') {
       classes += ' bg-indigo-100 text-indigo-600 dark:bg-indigo-900 dark:text-indigo-300';
     } else { // 'O'

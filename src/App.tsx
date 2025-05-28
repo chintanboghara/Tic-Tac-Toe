@@ -6,7 +6,7 @@ import ThemeSwitcher from './components/ThemeSwitcher';
 import SoundToggler from './components/SoundToggler';
 import Board from './components/Board';
 import ScoreBoard from './components/ScoreBoard';
-import { GameStats } from './types'; // Import GameStats
+import { GameStats, HistoricGame, BoardMove, PlayerSymbol } from './types'; // Import new types
 import GameHistory from './components/GameHistory';
 import { calculateWinner, checkDraw, getEasyAIMove } from './utils/gameLogic';
 
@@ -30,82 +30,124 @@ function App() {
   });
   const [playerXName, setPlayerXName] = useState("Player X");
   const [playerOName, setPlayerOName] = useState("Player O");
-  const [gameMode, setGameMode] = useState<'twoPlayer' | 'vsAI'>('twoPlayer'); // Added gameMode state
-  const [gameHistory, setGameHistory] = useState<Array<{
-    winner: string | null;
-    board: Array<string | null>;
-    date: Date;
-  }>>([]);
+  const [gameMode, setGameMode] = useState<'twoPlayer' | 'vsAI'>('twoPlayer');
+  const [gameHistory, setGameHistory] = useState<HistoricGame[]>(() => {
+    const storedHistory = localStorage.getItem('ticTacToeGameHistory');
+    try {
+      // Ensure date strings are converted back to Date objects
+      const parsedHistory = storedHistory ? JSON.parse(storedHistory) : [];
+      return parsedHistory.map((game: any) => ({ ...game, date: new Date(game.date) }));
+    } catch (error) {
+      console.error("Error parsing game history from localStorage:", error);
+      return [];
+    }
+  });
+  const [currentMoves, setCurrentMoves] = useState<BoardMove[]>([]);
   const [gameStatus, setGameStatus] = useState<'playing' | 'won' | 'draw'>('playing');
   const [winningLine, setWinningLine] = useState<number[] | null>(null);
+
+  // State for viewing game history
+  const [viewingHistoryGame, setViewingHistoryGame] = useState<HistoricGame | null>(null);
+  const [historyStep, setHistoryStep] = useState<number>(0);
 
   // Persist gameStats to localStorage
   useEffect(() => {
     localStorage.setItem('ticTacToeGameStats', JSON.stringify(gameStats));
   }, [gameStats]);
 
-  // Check for winner or draw & update gameStats
+  // Persist gameHistory to localStorage
+  useEffect(() => {
+    localStorage.setItem('ticTacToeGameHistory', JSON.stringify(gameHistory));
+  }, [gameHistory]);
+
+  // Check for winner or draw & update gameStats and gameHistory
   useEffect(() => {
     const result = calculateWinner(board); // result can be { winner: 'X' | 'O', line: number[] } | null
 
-    if (result) { // Game Won
-      setGameStatus('won');
-      setWinningLine(result.line);
-      playSound('win');
-      setGameHistory(prev => [
-        ...prev,
-        { winner: result.winner, board: [...board], date: new Date() },
-      ]);
+    if (gameStatus === 'playing' && (result || checkDraw(board))) { // Only update if game was 'playing'
+      const gameIsWon = !!result;
+      const winner = result ? result.winner as PlayerSymbol : null;
 
+      if (gameIsWon) {
+        setGameStatus('won');
+        setWinningLine(result!.line);
+        playSound('win');
+      } else { // Is a draw
+        setGameStatus('draw');
+        playSound('draw');
+      }
+
+      // Create and save the historic game entry
+      // currentMoves already contains the final board state due to handleClick's logic
+      const historicGameEntry: HistoricGame = {
+        id: Date.now().toString(),
+        moves: currentMoves, 
+        winner: winner,
+        date: new Date(),
+      };
+      setGameHistory(prevHistory => [historicGameEntry, ...prevHistory]);
+      setCurrentMoves([]); // Clear current moves for the next game
+
+      // Update statistics
       setGameStats(prevStats => {
         const newStats = { ...prevStats, totalGamesPlayed: prevStats.totalGamesPlayed + 1 };
         if (gameMode === 'twoPlayer') {
           newStats.pvp = {
             ...prevStats.pvp,
-            [result.winner!]: prevStats.pvp[result.winner! as 'X' | 'O'] + 1,
+            [result.winner!]: prevStats.pvp[result.winner as PlayerSymbol] + 1,
           };
         } else { // gameMode === 'vsAI'
-          if (result.winner === 'X') { // Player X (human) wins
+          if (result.winner === 'X') { 
             newStats.pva = { ...prevStats.pva, playerXWins: prevStats.pva.playerXWins + 1 };
-          } else { // AI ('O') wins
+          } else { 
             newStats.pva = { ...prevStats.pva, aiOWins: prevStats.pva.aiOWins + 1 };
           }
         }
         return newStats;
       });
+    } else if (gameStatus === 'playing' && checkDraw(board)) { // Game Draw
+        setGameStatus('draw');
+        playSound('draw');
+        
+        const historicGameEntry: HistoricGame = {
+          id: Date.now().toString(),
+          moves: currentMoves,
+          winner: null,
+          date: new Date(),
+        };
+        setGameHistory(prevHistory => [historicGameEntry, ...prevHistory]);
+        setCurrentMoves([]);
 
-    } else if (checkDraw(board)) { // Game Draw
-      setGameStatus('draw');
-      playSound('draw');
-      setGameHistory(prev => [
-        ...prev,
-        { winner: null, board: [...board], date: new Date() },
-      ]);
-
-      setGameStats(prevStats => {
-        const newStats = { ...prevStats, totalGamesPlayed: prevStats.totalGamesPlayed + 1 };
-        if (gameMode === 'twoPlayer') {
-          newStats.pvp = { ...prevStats.pvp, draws: prevStats.pvp.draws + 1 };
-        } else { // gameMode === 'vsAI'
-          newStats.pva = { ...prevStats.pva, draws: prevStats.pva.draws + 1 };
-        }
-        return newStats;
-      });
+        setGameStats(prevStats => {
+          const newStats = { ...prevStats, totalGamesPlayed: prevStats.totalGamesPlayed + 1 };
+          if (gameMode === 'twoPlayer') {
+            newStats.pvp = { ...prevStats.pvp, draws: prevStats.pvp.draws + 1 };
+          } else { // gameMode === 'vsAI'
+            newStats.pva = { ...prevStats.pva, draws: prevStats.pva.draws + 1 };
+          }
+          return newStats;
+        });
     }
-    // No change to gameStatus or stats if neither win nor draw
-  }, [board, playSound, gameMode]); // Add gameMode to dependencies
+  }, [board, playSound, gameMode, currentMoves, gameStatus]); // gameStatus to ensure this runs only once per game end
 
   // Handle square click - wrapped with useCallback
   const handleClick = useCallback((index: number) => {
     if (board[index] || gameStatus !== 'playing') return;
 
     const newBoard = [...board];
-    newBoard[index] = xIsNext ? 'X' : 'O';
+    const currentPlayer = xIsNext ? 'X' : 'O';
+    newBoard[index] = currentPlayer;
+
+    const move: BoardMove = {
+      board: [...newBoard], // Capture state *after* the move
+      player: currentPlayer,
+    };
+    setCurrentMoves(prevMoves => [...prevMoves, move]);
 
     setBoard(newBoard);
-    playSound('move'); // Play move sound
+    playSound('move');
     setXIsNext(!xIsNext);
-  }, [board, xIsNext, gameStatus, playSound]); // Added playSound
+  }, [board, xIsNext, gameStatus, playSound]); // Removed currentMoves from here to avoid re-creating handleClick on every move
 
   // useEffect for AI's turn
   useEffect(() => {
@@ -121,25 +163,84 @@ function App() {
   }, [xIsNext, gameMode, gameStatus, board, handleClick]);
 
   // Reset the game
-  const resetGame = useCallback(() => { // Wrapped in useCallback for stability if used in other effects
+  const resetGame = useCallback(() => {
     setBoard(Array(9).fill(null));
     setXIsNext(true);
     setGameStatus('playing');
     setWinningLine(null);
-  }, []); // No dependencies, this function is stable
+    setCurrentMoves([]); // Clear current moves on game reset
+  }, []);
 
   // Reset all stats
   const resetStats = useCallback(() => {
     resetGame();
-    setGameStats(initialGameStats); // Use the global const
-    localStorage.removeItem('ticTacToeGameStats'); // Clear new stats from localStorage
-    // localStorage.removeItem('ticTacToeScores'); // Old cleanup, can be removed after one deploy
-    setGameHistory([]);
+    setGameStats(initialGameStats);
+    localStorage.removeItem('ticTacToeGameStats');
+    setGameHistory([]); // Clear history from state
+    localStorage.removeItem('ticTacToeGameHistory'); // Clear new history from localStorage
     playSound('click');
-  }, [resetGame, playSound]); // initialGameStats is stable as it's a top-level const
+  }, [resetGame, playSound]);
+
+  // Function to handle viewing a historic game
+  const handleViewHistoricGame = useCallback((game: HistoricGame) => {
+    if (game.moves.length === 0) {
+      console.warn("Attempted to view a historic game with no moves.");
+      return;
+    }
+    setViewingHistoryGame(game);
+    setHistoryStep(game.moves.length - 1); // Start by viewing the last move
+    playSound('click'); // Play a click sound when viewing history
+  }, [playSound]);
+
+  // Function to handle viewing a historic game
+  const handleViewHistoricGame = useCallback((game: HistoricGame) => {
+    if (game.moves.length === 0) {
+      console.warn("Attempted to view a historic game with no moves.");
+      return;
+    }
+    setViewingHistoryGame(game);
+    setHistoryStep(game.moves.length - 1); // Start by viewing the last move
+    playSound('click'); // Play a click sound when viewing history
+  }, [playSound]);
+
+  // Navigation functions for history view
+  const handleHistoryPrev = useCallback(() => {
+    setHistoryStep(prevStep => Math.max(0, prevStep - 1));
+    playSound('click');
+  }, [playSound]);
+
+  const handleHistoryNext = useCallback(() => {
+    if (viewingHistoryGame) {
+      setHistoryStep(prevStep => Math.min(viewingHistoryGame.moves.length - 1, prevStep + 1));
+    }
+    playSound('click');
+  }, [viewingHistoryGame, playSound]);
+
+  const handleExitHistoryView = useCallback(() => {
+    setViewingHistoryGame(null);
+    // historyStep state doesn't need explicit reset, it'll be unused.
+    // The board will revert to live state automatically due to boardToDisplay logic.
+    // The main useEffect for win/draw will re-evaluate based on live board.
+    playSound('click');
+  }, [playSound]);
 
   // Get current game status message
   const getStatusMessage = () => {
+    // History Viewing Mode takes precedence for status message
+    if (viewingHistoryGame) {
+      const game = viewingHistoryGame;
+      const move = game.moves[historyStep];
+      let status = `Viewing history: Move ${historyStep + 1}/${game.moves.length}. Player ${move.player} moved.`;
+      if (historyStep === game.moves.length - 1) { // Last move
+        if (game.winner) {
+          status += ` Game won by ${game.winner}.`;
+        } else {
+          status += " Game ended in a draw.";
+        }
+      }
+      return status;
+    }
+
     if (gameStatus === 'won') {
       const winnerSymbol = !xIsNext ? 'X' : 'O'; // The player who just made the move
       if (gameMode === 'vsAI') {
@@ -160,7 +261,7 @@ function App() {
 
   return (
     <ThemeProvider>
-      <SoundProvider> {/* SoundProvider wraps the main content */}
+      <SoundProvider>
         <div className="min-h-screen bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-slate-800 dark:to-gray-900 flex flex-col items-center justify-center p-4">
           <div className="max-w-4xl w-full bg-white dark:bg-slate-850 rounded-xl shadow-lg overflow-hidden">
             <div className="p-6 bg-indigo-600 dark:bg-indigo-700 text-white text-center relative">
@@ -187,8 +288,10 @@ function App() {
                   }
                   playSound('click');
                 }}
+                disabled={!!viewingHistoryGame}
                 className={`py-2 px-4 rounded-lg transition-colors
-                            ${gameMode === 'twoPlayer' ? 'bg-blue-500 text-white dark:bg-blue-600' : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'}`}
+                            ${gameMode === 'twoPlayer' ? 'bg-blue-500 text-white dark:bg-blue-600' : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'}
+                            ${!!viewingHistoryGame ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 Play vs Player
               </button>
@@ -199,8 +302,10 @@ function App() {
                   setPlayerOName("Easy AI"); // Set AI name
                   playSound('click');
                 }}
+                disabled={!!viewingHistoryGame}
                 className={`py-2 px-4 rounded-lg transition-colors
-                            ${gameMode === 'vsAI' ? 'bg-green-500 text-white dark:bg-green-600' : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'}`}
+                            ${gameMode === 'vsAI' ? 'bg-green-500 text-white dark:bg-green-600' : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'}
+                            ${!!viewingHistoryGame ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 Play vs AI (Easy)
               </button>
@@ -215,7 +320,8 @@ function App() {
                   id="playerXName"
                   value={playerXName}
                   onChange={(e) => setPlayerXName(e.target.value)}
-                  className="border p-1 rounded w-full sm:w-auto dark:bg-slate-700 dark:text-white dark:border-slate-600"
+                  disabled={!!viewingHistoryGame}
+                  className="border p-1 rounded w-full sm:w-auto dark:bg-slate-700 dark:text-white dark:border-slate-600 disabled:opacity-50 dark:disabled:opacity-60"
                 />
               </div>
               <div className="flex items-center gap-2">
@@ -225,8 +331,8 @@ function App() {
                   id="playerOName"
                   value={playerOName}
                   onChange={(e) => setPlayerOName(e.target.value)}
-                  disabled={gameMode === 'vsAI'} // Disable if AI mode
-                  className="border p-1 rounded w-full sm:w-auto dark:bg-slate-700 dark:text-white dark:border-slate-600 disabled:opacity-50"
+                  disabled={gameMode === 'vsAI' || !!viewingHistoryGame} // Disable if AI mode OR viewing history
+                  className="border p-1 rounded w-full sm:w-auto dark:bg-slate-700 dark:text-white dark:border-slate-600 disabled:opacity-50 dark:disabled:opacity-60"
                 />
               </div>
             </div>
@@ -238,11 +344,36 @@ function App() {
               <h2 className="text-xl font-semibold text-indigo-800 dark:text-indigo-300">{getStatusMessage()}</h2>
             </div>
             
-            <Board
-              squares={board} 
-              onClick={handleClick} 
-              winningLine={winningLine}
-            />
+            {(() => {
+              // Determine current board to display
+              const boardToDisplay = viewingHistoryGame
+                ? viewingHistoryGame.moves[historyStep]?.board // Use optional chaining
+                : board;
+
+              // Determine if clicks should be enabled
+              const canClickBoard = !viewingHistoryGame && gameStatus === 'playing';
+
+              // Determine winning line to display
+              let lineToShow = null;
+              if (viewingHistoryGame) {
+                const historicGame = viewingHistoryGame;
+                if (historyStep === historicGame.moves.length - 1 && historicGame.winner) {
+                  const historicWinInfo = calculateWinner(historicGame.moves[historyStep]?.board || []);
+                  lineToShow = historicWinInfo ? historicWinInfo.line : null;
+                }
+              } else {
+                lineToShow = winningLine; // Current game's winning line
+              }
+
+              return (
+                <Board
+                  squares={boardToDisplay || Array(9).fill(null)} // Fallback for safety
+                  onClick={canClickBoard ? handleClick : () => {}}
+                  winningLine={lineToShow}
+                  isInteractive={canClickBoard} // Pass down interactivity
+                />
+              );
+            })()}
             
             <div className="mt-6 flex gap-4">
               <button
@@ -250,18 +381,56 @@ function App() {
                   resetGame();
                   playSound('click');
                 }}
-                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-500 dark:hover:bg-indigo-600 py-2 px-4 rounded-lg transition-colors"
+                disabled={!!viewingHistoryGame} // Disable when viewing history
+                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-500 dark:hover:bg-indigo-600 py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
               >
                 <RefreshCw className="h-4 w-4" />
                 New Game
               </button>
               <button
                 onClick={resetStats} // resetStats already calls playSound('click')
-                className="bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-gray-600 dark:hover:bg-gray-700 dark:text-gray-200 py-2 px-4 rounded-lg transition-colors"
+                disabled={!!viewingHistoryGame} // Disable when viewing history
+                className="bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-gray-600 dark:hover:bg-gray-700 dark:text-gray-200 py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
               >
                 Reset All
               </button>
             </div>
+
+            {/* History Navigation Controls */}
+            {viewingHistoryGame && (
+              <div className="mt-4 p-4 border-t dark:border-slate-700">
+                <h3 className="text-lg font-semibold mb-2 text-center text-gray-700 dark:text-gray-300">
+                  History Navigation
+                </h3>
+                <div className="flex justify-center items-center gap-4">
+                  <button
+                    onClick={handleHistoryPrev}
+                    disabled={historyStep === 0}
+                    className="py-2 px-4 rounded-lg bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 disabled:opacity-50 transition-colors"
+                  >
+                    Previous Move
+                  </button>
+                  <span className="text-gray-700 dark:text-gray-300">
+                    Move {historyStep + 1} of {viewingHistoryGame.moves.length}
+                  </span>
+                  <button
+                    onClick={handleHistoryNext}
+                    disabled={historyStep === viewingHistoryGame.moves.length - 1}
+                    className="py-2 px-4 rounded-lg bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 disabled:opacity-50 transition-colors"
+                  >
+                    Next Move
+                  </button>
+                </div>
+                <div className="mt-4 text-center">
+                  <button
+                    onClick={handleExitHistoryView}
+                    className="py-2 px-6 rounded-lg bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white transition-colors"
+                  >
+                    Return to Current Game
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
           
             {/* Stats section */}
@@ -272,7 +441,7 @@ function App() {
                 playerOName={playerOName} 
                 gameMode={gameMode} 
               />
-              <GameHistory history={gameHistory} />
+              <GameHistory history={gameHistory} onViewHistoricGame={handleViewHistoricGame} />
             </div>
           </div>
         </div>

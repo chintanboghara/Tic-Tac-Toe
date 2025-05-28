@@ -125,66 +125,61 @@ describe('GameHistory Component', () => {
     expect(cells[2]).toHaveClass('bg-gray-200');
     expect(cells[2]).toHaveTextContent('');
   });
+
+  // Test Case 4: onViewHistoricGame callback
+  test('calls onViewHistoricGame with the correct game when a history item is clicked', () => {
+    const mockOnViewHistoricGame = jest.fn();
+    const mockDate1 = new Date();
+    const mockDate2 = new Date(mockDate1.getTime() + 1000);
+
+    const historyData: GameHistoryProps['history'] = [
+      {
+        id: 'game1',
+        moves: [{ board: Array(9).fill('X'), player: 'X' }],
+        winner: 'X',
+        date: mockDate1,
+      },
+      {
+        id: 'game2',
+        moves: [{ board: Array(9).fill('O'), player: 'O' }],
+        winner: 'O',
+        date: mockDate2,
+      },
+    ];
+
+    render(
+      <GameHistory
+        history={historyData}
+        onViewHistoricGame={mockOnViewHistoricGame}
+      />
+    );
+
+    // The component displays history in the order it receives (App.tsx already reverses it by prepending)
+    // So, historyData[0] (game1) should be the first button
+    const gameButtons = screen.getAllByRole('button');
+    expect(gameButtons.length).toBe(historyData.length); // Ensure all items are rendered as buttons
+
+    // Click the first game entry (game1)
+    fireEvent.click(gameButtons[0]);
+    expect(mockOnViewHistoricGame).toHaveBeenCalledTimes(1);
+    expect(mockOnViewHistoricGame).toHaveBeenCalledWith(historyData[0]);
+
+    mockOnViewHistoricGame.mockClear(); // Clear mock for the next assertion
+
+    // Click the second game entry (game2)
+    fireEvent.click(gameButtons[1]);
+    expect(mockOnViewHistoricGame).toHaveBeenCalledTimes(1);
+    expect(mockOnViewHistoricGame).toHaveBeenCalledWith(historyData[1]);
+  });
 });
 
-// Helper to add roles to GameHistory items for easier querying if not already present
-// Modify GameHistory.tsx:
-// <div key={index} className="p-2 ..." role="listitem"> // Add role="listitem" to the main div of each history entry
-//   ...
-//   <div className="mt-2 grid grid-cols-3 ..." role="grid"> // Add role="grid" to the mini-board div
-//     {game.board.map((square, i) => (
-//       <div key={i} className={`w-full h-full ...`} role="gridcell"> // Add role="gridcell" to each cell div
-//         {square}
-//       </div>
-//     ))}
-//   </div>
-// </div>
-//
-// Also, for `queryAllByTestId('mini-board-display')` to work, you would add `data-testid="mini-board-display"` to the mini-board div.
-// <div className="mt-2 grid grid-cols-3 ..." role="grid" data-testid="mini-board-display">
-//
-// These roles/test-ids make tests more robust.
-// The current tests assume these roles are present or uses alternative queries.
-// For `getAllByText('X')` to work inside a mini-board, the mini-board element must be correctly selected first.
-// `within(miniBoardElement).getAllByText('X')` is the correct approach.
-//
-// The provided test code for GameHistory.test.tsx assumes some ARIA roles (listitem, grid, gridcell)
-// might need to be added to GameHistory.tsx for robust querying.
-// If these roles are not present, queries like `screen.getAllByRole('listitem')` will fail.
-// Alternative queries (e.g., based on class names or `data-testid`) would be needed.
-// For now, the tests are written with the assumption that these roles can be added or similar querying strategies are viable.
+// Note: The roles 'listitem', 'grid', 'gridcell' are not standard for button elements.
+// The GameHistory component was updated in a previous task to wrap each entry in a <button>.
+// So, querying by role 'button' is more appropriate for the clickable entries.
+// The ARIA label added to these buttons is also a good way to query them.
+// Example: screen.getByRole('button', { name: /View details for game played on/i });
+// The internal structure for mini-board (grid/gridcell) is fine for `within` queries.
 
-// The GameHistory component uses `[...history].reverse().map(...)`.
-// So, if historyData is [game1, game2], the UI will show game2 then game1.
-// gameEntries[0] will be game2, gameEntries[1] will be game1.
-// The test logic for checking game entries has been adjusted to reflect this.
-// First item in `historyData` (index 0) is the *last* one displayed if `reverse()` is used.
-// The tests were updated:
-// `firstGameEntry` (UI) corresponds to `historyData[1]` (data array)
-// `secondGameEntry` (UI) corresponds to `historyData[0]` (data array)
-// This matches the typical reverse chronological order of history lists.
-// The test was written assuming the component internally reverses the array for display.
-// So, gameEntries[0] is the *latest* game, gameEntries[1] is the second latest, etc.
-// And if historyData = [oldestGame, newerGame], then
-// gameEntries[0] (latest shown) = historyData[1] (newerGame)
-// gameEntries[1] (older shown) = historyData[0] (oldestGame)
-// This is what the updated test reflects.Okay, I've created the `src/components/__tests__/GameHistory.test.tsx` file with the test cases for the game history mini-board display.
-
-The tests cover:
-1.  Rendering with an empty history.
-2.  Rendering with game entries, including outcomes, timestamps, and verifying the content of the mini-boards (number of 'X's, 'O's, and empty cells).
-3.  A test for cell styling (though noted as potentially brittle).
-
-I've also included comments in the test file about potential ARIA roles (`listitem`, `grid`, `gridcell`) that would make querying more robust. If these are not present in `GameHistory.tsx`, the tests might need adjustments to use different query selectors (e.g., `data-testid` or class-based selectors).
-
-The tests also account for the fact that the `GameHistory` component reverses the order of games for display (latest game first).
-
-**Regarding `gameLogic.test.ts` (Step 3 of the task):**
-As reviewed in my previous turn, the existing tests for `calculateWinner` and `checkDraw` in `src/__tests__/gameLogic.test.ts` are still relevant and sufficient. The simplification of `checkDraw` (removing the internal `calculateWinner` call) means it now solely relies on `squares.every(square => square !== null)`. The existing tests effectively cover this:
-*   `should return false when board is not full`: Tests the `every` condition when not all are filled.
-*   `should return true when board is full with no winner`: Tests the `every` condition when all are filled (and `calculateWinner` is assumed to have returned null).
-*   `should return false when there is a winner`: This test still passes because the example board (`['X', 'X', 'X', 'O', 'O', null, null, null, null]`) is not full. If it were full *and* had a winner, `checkDraw` would return `true`, but in the application flow, `calculateWinner` would catch the win first.
-
-No changes or new tests are needed for `gameLogic.test.ts`.
-
-I will now submit the report for this subtask.
+// Regarding the map order: App.tsx now prepends to gameHistory, so the history array
+// is already in reverse chronological order. GameHistory.tsx iterates this as is.
+// Thus, historyData[0] is the newest game and will be the first button.
