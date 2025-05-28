@@ -25,21 +25,63 @@ A modern implementation of the classic Tic Tac Toe game built with React, TypeSc
 - **React 18**
 - **TypeScript**
 - **Tailwind CSS**
+- **Vite**
+- **Vitest**
 - **Lucide React** for icons
 
 ## Project Structure
 
 ```plaintext
-src/
-├── components/
-│   ├── Board.tsx       # Game board component
-│   ├── Square.tsx      # Individual square component
-│   ├── ScoreBoard.tsx  # Score tracking component
-│   └── GameHistory.tsx # Game history component
-├── utils/
-│   └── gameLogic.ts    # Game logic utilities
-├── App.tsx             # Main application component
-└── main.tsx            # Entry point
+.
+├── Terraform/
+│   ├── main.tf         # Main Terraform configuration for AWS infrastructure
+│   ├── variables.tf    # Terraform variables
+│   ├── outputs.tf      # Terraform outputs
+│   └── backend.tf      # Terraform backend configuration (e.g., S3)
+├── public/             # Static assets
+│   └── vite.svg        # Vite logo (example)
+├── src/
+│   ├── __tests__/
+│   │   └── gameLogic.test.ts # Unit tests for game logic
+│   ├── components/
+│   │   ├── __tests__/      # Unit tests for React components
+│   │   │   ├── App.test.tsx
+│   │   │   ├── GameHistory.test.tsx
+│   │   │   └── ThemeSwitcher.test.tsx
+│   │   ├── Board.tsx       # Game board component
+│   │   ├── GameHistory.tsx # Game history component
+│   │   ├── ScoreBoard.tsx  # Score tracking component
+│   │   ├── SoundToggler.tsx # Component to toggle sound
+│   │   ├── Square.tsx      # Individual square component
+│   │   └── ThemeSwitcher.tsx # Component to switch themes
+│   ├── contexts/
+│   │   ├── __tests__/      # Unit tests for React contexts
+│   │   │   ├── SoundContext.test.tsx
+│   │   │   └── ThemeContext.test.tsx
+│   │   ├── SoundContext.tsx # Context for sound settings
+│   │   └── ThemeContext.tsx  # Context for theme settings
+│   ├── utils/
+│   │   └── gameLogic.ts    # Game logic utilities
+│   ├── App.tsx             # Main application component
+│   ├── index.css           # Global CSS styles
+│   ├── main.tsx            # Entry point for the React application
+│   ├── types.ts            # TypeScript type definitions
+│   └── vite-env.d.ts       # Vite environment variables declaration
+├── .dockerignore           # Specifies intentionally untracked files that Docker should ignore
+├── .eslintrc.json          # ESLint configuration (older format, consider eslint.config.js)
+├── .gitignore              # Specifies intentionally untracked files that Git should ignore
+├── Dockerfile              # Docker configuration for building the application image
+├── README.md               # Project overview and instructions
+├── docker-compose.yml      # Docker Compose configuration for multi-container setups
+├── eslint.config.js        # ESLint configuration for code linting
+├── index.html              # Main HTML file
+├── package-lock.json       # Records exact versions of dependencies
+├── package.json            # Project metadata and dependencies
+├── postcss.config.js       # PostCSS configuration
+├── tailwind.config.js      # Tailwind CSS configuration
+├── tsconfig.json           # TypeScript compiler options
+├── tsconfig.node.json      # TypeScript compiler options for Node.js environment
+└── vite.config.ts          # Vite configuration
 ```
 
 ## Game Logic
@@ -133,3 +175,40 @@ Using Docker Compose, you can use the provided `docker-compose.yml` file:
    ```bash
    docker-compose up -d --build
    ```
+
+## Infrastructure as Code (Terraform)
+
+This project uses Terraform to manage and provision infrastructure, likely on a cloud provider such as AWS (inferred from typical Terraform usage and file names like `backend.tf`). The Terraform setup helps in automating the deployment environment for the Tic Tac Toe application.
+
+Key files in the `Terraform/` directory:
+- `main.tf`: Contains the main set of configurations for the infrastructure.
+- `variables.tf`: Defines variables used in the Terraform configurations.
+- `outputs.tf`: Specifies the output values after infrastructure provisioning.
+- `backend.tf`: Configures the Terraform backend, often used for state storage (e.g., AWS S3).
+
+### Common Terraform Commands
+
+1.  **Initialize Terraform:**
+    Navigate to the `Terraform/` directory and run:
+    ```bash
+    terraform init
+    ```
+
+2.  **Plan Changes:**
+    (Optional but recommended) Preview the changes Terraform will make:
+    ```bash
+    terraform plan
+    ```
+
+3.  **Apply Changes:**
+    Provision or update the infrastructure:
+    ```bash
+    terraform apply
+    ```
+    You will be prompted to confirm the changes before they are applied.
+
+4.  **Destroy Infrastructure:**
+    (Use with caution) Remove the infrastructure managed by Terraform:
+    ```bash
+    terraform destroy
+    ```
