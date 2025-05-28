@@ -3,19 +3,31 @@ import { RefreshCw, Award } from 'lucide-react';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { SoundProvider, useSounds } from './contexts/SoundContext';
 import ThemeSwitcher from './components/ThemeSwitcher';
-import SoundToggler from './components/SoundToggler'; // Import SoundToggler
+import SoundToggler from './components/SoundToggler';
 import Board from './components/Board';
 import ScoreBoard from './components/ScoreBoard';
+import { GameStats } from './types'; // Import GameStats
 import GameHistory from './components/GameHistory';
-import { calculateWinner, checkDraw, getEasyAIMove } from './utils/gameLogic'; // Added getEasyAIMove
+import { calculateWinner, checkDraw, getEasyAIMove } from './utils/gameLogic';
+
+// initialGameStats now uses the imported GameStats type
+const initialGameStats: GameStats = {
+  totalGamesPlayed: 0,
+  pvp: { X: 0, O: 0, draws: 0 },
+  pva: { playerXWins: 0, aiOWins: 0, draws: 0 },
+};
 
 function App() {
-  const { playSound } = useSounds(); // Initialize playSound
+  const { playSound } = useSounds();
 
   // Game state
   const [board, setBoard] = useState(Array(9).fill(null));
   const [xIsNext, setXIsNext] = useState(true);
-  const [scores, setScores] = useState({ X: 0, O: 0, draws: 0 });
+  // Replace old scores state with new gameStats state
+  const [gameStats, setGameStats] = useState<GameStats>(() => {
+    const storedStats = localStorage.getItem('ticTacToeGameStats');
+    return storedStats ? JSON.parse(storedStats) : initialGameStats;
+  });
   const [playerXName, setPlayerXName] = useState("Player X");
   const [playerOName, setPlayerOName] = useState("Player O");
   const [gameMode, setGameMode] = useState<'twoPlayer' | 'vsAI'>('twoPlayer'); // Added gameMode state
@@ -27,43 +39,61 @@ function App() {
   const [gameStatus, setGameStatus] = useState<'playing' | 'won' | 'draw'>('playing');
   const [winningLine, setWinningLine] = useState<number[] | null>(null);
 
-  // Check for winner or draw
+  // Persist gameStats to localStorage
   useEffect(() => {
-    const result = calculateWinner(board);
-    
-    if (result) {
+    localStorage.setItem('ticTacToeGameStats', JSON.stringify(gameStats));
+  }, [gameStats]);
+
+  // Check for winner or draw & update gameStats
+  useEffect(() => {
+    const result = calculateWinner(board); // result can be { winner: 'X' | 'O', line: number[] } | null
+
+    if (result) { // Game Won
       setGameStatus('won');
       setWinningLine(result.line);
-      
-      // Update scores
-      setScores(prevScores => ({
-        ...prevScores,
-        [result.winner]: prevScores[result.winner as keyof typeof prevScores] + 1
-      }));
-      
-      // Add to history
+      playSound('win');
       setGameHistory(prev => [
-        ...prev, 
-        { winner: result.winner, board: [...board], date: new Date() }
+        ...prev,
+        { winner: result.winner, board: [...board], date: new Date() },
       ]);
-      playSound('win'); // Play win sound
-    } else if (checkDraw(board)) {
+
+      setGameStats(prevStats => {
+        const newStats = { ...prevStats, totalGamesPlayed: prevStats.totalGamesPlayed + 1 };
+        if (gameMode === 'twoPlayer') {
+          newStats.pvp = {
+            ...prevStats.pvp,
+            [result.winner!]: prevStats.pvp[result.winner! as 'X' | 'O'] + 1,
+          };
+        } else { // gameMode === 'vsAI'
+          if (result.winner === 'X') { // Player X (human) wins
+            newStats.pva = { ...prevStats.pva, playerXWins: prevStats.pva.playerXWins + 1 };
+          } else { // AI ('O') wins
+            newStats.pva = { ...prevStats.pva, aiOWins: prevStats.pva.aiOWins + 1 };
+          }
+        }
+        return newStats;
+      });
+
+    } else if (checkDraw(board)) { // Game Draw
       setGameStatus('draw');
-      
-      // Update draw count
-      setScores(prevScores => ({
-        ...prevScores,
-        draws: prevScores.draws + 1
-      }));
-      
-      // Add to history
+      playSound('draw');
       setGameHistory(prev => [
-        ...prev, 
-        { winner: null, board: [...board], date: new Date() }
+        ...prev,
+        { winner: null, board: [...board], date: new Date() },
       ]);
-      playSound('draw'); // Play draw sound
+
+      setGameStats(prevStats => {
+        const newStats = { ...prevStats, totalGamesPlayed: prevStats.totalGamesPlayed + 1 };
+        if (gameMode === 'twoPlayer') {
+          newStats.pvp = { ...prevStats.pvp, draws: prevStats.pvp.draws + 1 };
+        } else { // gameMode === 'vsAI'
+          newStats.pva = { ...prevStats.pva, draws: prevStats.pva.draws + 1 };
+        }
+        return newStats;
+      });
     }
-  }, [board, playSound]); // Added playSound
+    // No change to gameStatus or stats if neither win nor draw
+  }, [board, playSound, gameMode]); // Add gameMode to dependencies
 
   // Handle square click - wrapped with useCallback
   const handleClick = useCallback((index: number) => {
@@ -101,10 +131,12 @@ function App() {
   // Reset all stats
   const resetStats = useCallback(() => {
     resetGame();
-    setScores({ X: 0, O: 0, draws: 0 });
+    setGameStats(initialGameStats); // Use the global const
+    localStorage.removeItem('ticTacToeGameStats'); // Clear new stats from localStorage
+    // localStorage.removeItem('ticTacToeScores'); // Old cleanup, can be removed after one deploy
     setGameHistory([]);
-    playSound('click'); // Play click sound for reset all
-  }, [resetGame, playSound]);
+    playSound('click');
+  }, [resetGame, playSound]); // initialGameStats is stable as it's a top-level const
 
   // Get current game status message
   const getStatusMessage = () => {
@@ -234,7 +266,12 @@ function App() {
           
             {/* Stats section */}
             <div className="flex flex-col gap-6">
-              <ScoreBoard scores={scores} playerXName={playerXName} playerOName={playerOName} />
+              <ScoreBoard 
+                stats={gameStats} 
+                playerXName={playerXName} 
+                playerOName={playerOName} 
+                gameMode={gameMode} 
+              />
               <GameHistory history={gameHistory} />
             </div>
           </div>

@@ -177,3 +177,247 @@ describe('App Component - AI Mode', () => {
     expect(playerOInput.value).toBe('Player O'); // Resets to default "Player O"
   });
 });
+
+describe('App Component - Detailed Statistics', () => {
+  let localStorageGetItemSpy: jest.SpyInstance;
+  let localStorageSetItemSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    localStorageGetItemSpy = jest.spyOn(Storage.prototype, 'getItem');
+    localStorageSetItemSpy = jest.spyOn(Storage.prototype, 'setItem');
+    (mockGetEasyAIMove as jest.Mock).mockClear();
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    localStorageGetItemSpy.mockRestore();
+    localStorageSetItemSpy.mockRestore();
+    localStorage.clear();
+    act(() => { // Ensure all timers are processed before restoring real timers
+        jest.runOnlyPendingTimers();
+    });
+    jest.useRealTimers();
+  });
+
+  test('initializes with default stats if localStorage is empty', () => {
+    localStorageGetItemSpy.mockReturnValue(null);
+    render(<App />);
+    // Check ScoreBoard for initial stats (Total Games: 0)
+    expect(screen.getByText('Total Games').nextElementSibling?.textContent).toBe('0');
+    // Check PvP mode stats by default
+    expect(screen.getByText('Player X').nextElementSibling?.textContent).toBe('0');
+    expect(screen.getByText('Player O').nextElementSibling?.textContent).toBe('0');
+    const drawElements = screen.getAllByText('Draws'); // Can be multiple "Draws" labels
+    // Assuming the one in PvP is the one we care about here for default view
+    // This query might need to be more specific if ScoreBoard structure changes
+    expect(drawElements.find(el => el.closest('.mt-3'))?.nextElementSibling?.textContent).toBe('0');
+  });
+
+  test('initializes stats from localStorage if present', () => {
+    const mockStats = {
+      totalGamesPlayed: 5,
+      pvp: { X: 2, O: 1, draws: 1 },
+      pva: { playerXWins: 1, aiOWins: 0, draws: 0 },
+    };
+    localStorageGetItemSpy.mockReturnValue(JSON.stringify(mockStats));
+    render(<App />);
+    expect(screen.getByText('Total Games').nextElementSibling?.textContent).toBe('5');
+    // PvP mode is default
+    expect(screen.getByText('Player X').nextElementSibling?.textContent).toBe('2');
+    expect(screen.getByText('Player O').nextElementSibling?.textContent).toBe('1');
+    const drawElements = screen.getAllByText('Draws');
+    expect(drawElements.find(el => el.closest('.mt-3'))?.nextElementSibling?.textContent).toBe('1');
+  });
+
+  test('PvP Mode: Player X wins, updates stats and localStorage correctly', async () => {
+    localStorageGetItemSpy.mockReturnValue(null);
+    render(<App />);
+    
+    const squares = screen.getAllByRole('button', { name: /square/i });
+    fireEvent.click(squares[0]); // X
+    fireEvent.click(squares[3]); // O
+    fireEvent.click(squares[1]); // X
+    fireEvent.click(squares[4]); // O
+    fireEvent.click(squares[2]); // X wins
+
+    await waitFor(() => {
+      expect(localStorageSetItemSpy).toHaveBeenCalledWith(
+        'ticTacToeGameStats',
+        JSON.stringify({
+          totalGamesPlayed: 1,
+          pvp: { X: 1, O: 0, draws: 0 },
+          pva: { playerXWins: 0, aiOWins: 0, draws: 0 },
+        })
+      );
+    });
+    expect(screen.getByText('Total Games').nextElementSibling?.textContent).toBe('1');
+    expect(screen.getByText('Player X').nextElementSibling?.textContent).toBe('1');
+  });
+
+  test('PvP Mode: Draw, updates stats and localStorage correctly', async () => {
+    localStorageGetItemSpy.mockReturnValue(null);
+    render(<App />);
+    const squares = screen.getAllByRole('button', { name: /square/i });
+    // X O X
+    // X O X
+    // O X O - Draw
+    fireEvent.click(squares[0]); // X
+    fireEvent.click(squares[1]); // O
+    fireEvent.click(squares[2]); // X
+    fireEvent.click(squares[3]); // O
+    fireEvent.click(squares[5]); // X
+    fireEvent.click(squares[4]); // O
+    fireEvent.click(squares[6]); // X
+    fireEvent.click(squares[8]); // O
+    fireEvent.click(squares[7]); // X
+
+    await waitFor(() => {
+      expect(localStorageSetItemSpy).toHaveBeenCalledWith(
+        'ticTacToeGameStats',
+        JSON.stringify({
+          totalGamesPlayed: 1,
+          pvp: { X: 0, O: 0, draws: 1 },
+          pva: { playerXWins: 0, aiOWins: 0, draws: 0 },
+        })
+      );
+    });
+    expect(screen.getByText('Total Games').nextElementSibling?.textContent).toBe('1');
+    const drawElements = screen.getAllByText('Draws');
+    expect(drawElements.find(el => el.closest('.mt-3'))?.nextElementSibling?.textContent).toBe('1');
+  });
+
+  test('PvA Mode: Player X (Human) Wins, updates stats and localStorage', async () => {
+    localStorageGetItemSpy.mockReturnValue(null);
+    render(<App />);
+    fireEvent.click(screen.getByText(/Play vs AI \(Easy\)/i)); // Switch to PvA
+
+    (mockGetEasyAIMove as jest.Mock).mockReturnValueOnce(3).mockReturnValueOnce(4); // AI moves
+
+    const squares = screen.getAllByRole('button', { name: /square/i });
+    fireEvent.click(squares[0]); // X
+    act(() => { jest.advanceTimersByTime(1000); }); // AI moves to 3
+    fireEvent.click(squares[1]); // X
+    act(() => { jest.advanceTimersByTime(1000); }); // AI moves to 4
+    fireEvent.click(squares[2]); // X wins
+
+    await waitFor(() => {
+      expect(localStorageSetItemSpy).toHaveBeenCalledWith(
+        'ticTacToeGameStats',
+        JSON.stringify(expect.objectContaining({
+          totalGamesPlayed: 1,
+          pvp: { X: 0, O: 0, draws: 0 },
+          pva: { playerXWins: 1, aiOWins: 0, draws: 0 },
+        }))
+      );
+    });
+    expect(screen.getByText('Total Games').nextElementSibling?.textContent).toBe('1');
+    // Check PvA stats in ScoreBoard (Player X (You))
+    expect(screen.getByText(/Player X \(You\)/i).nextElementSibling?.textContent).toBe('1');
+  });
+  
+  test('PvA Mode: AI Wins, updates stats and localStorage', async () => {
+    localStorageGetItemSpy.mockReturnValue(null);
+    render(<App />);
+    fireEvent.click(screen.getByText(/Play vs AI \(Easy\)/i));
+
+    (mockGetEasyAIMove as jest.Mock)
+      .mockReturnValueOnce(0) // AI
+      .mockReturnValueOnce(1) // AI
+      .mockReturnValueOnce(2); // AI wins
+
+    const squares = screen.getAllByRole('button', { name: /square/i });
+    fireEvent.click(squares[3]); // X
+    act(() => { jest.advanceTimersByTime(1000); }); // AI moves to 0
+    fireEvent.click(squares[4]); // X
+    act(() => { jest.advanceTimersByTime(1000); }); // AI moves to 1
+    // Player X would play here, but AI will win on its next turn regardless of X's move
+    // Let AI make its third move (triggered by X's turn ending after previous AI move)
+    act(() => { jest.advanceTimersByTime(1000); }); // AI moves to 2 (and wins)
+
+    await waitFor(() => {
+      expect(localStorageSetItemSpy).toHaveBeenCalledWith(
+        'ticTacToeGameStats',
+        JSON.stringify(expect.objectContaining({
+          totalGamesPlayed: 1,
+          pvp: { X: 0, O: 0, draws: 0 },
+          pva: { playerXWins: 0, aiOWins: 1, draws: 0 },
+        }))
+      );
+    });
+    expect(screen.getByText('Total Games').nextElementSibling?.textContent).toBe('1');
+    expect(screen.getByText('Easy AI').nextElementSibling?.textContent).toBe('1');
+  });
+
+  test('PvA Mode: Draw, updates stats and localStorage', async () => {
+    localStorageGetItemSpy.mockReturnValue(null);
+    render(<App />);
+    fireEvent.click(screen.getByText(/Play vs AI \(Easy\)/i));
+
+    // Mock a sequence of AI moves that leads to a draw
+    (mockGetEasyAIMove as jest.Mock)
+      .mockReturnValueOnce(1) // O
+      .mockReturnValueOnce(3) // O
+      .mockReturnValueOnce(4) // O
+      .mockReturnValueOnce(8); // O
+
+    const squares = screen.getAllByRole('button', { name: /square/i });
+    // X O X
+    // O O X
+    // X X O
+    fireEvent.click(squares[0]); // X
+    act(() => { jest.advanceTimersByTime(1000); }); // AI to 1
+    fireEvent.click(squares[2]); // X
+    act(() => { jest.advanceTimersByTime(1000); }); // AI to 3
+    fireEvent.click(squares[5]); // X
+    act(() => { jest.advanceTimersByTime(1000); }); // AI to 4
+    fireEvent.click(squares[6]); // X
+    act(() => { jest.advanceTimersByTime(1000); }); // AI to 8
+    fireEvent.click(squares[7]); // X - Draw
+
+    await waitFor(() => {
+      expect(localStorageSetItemSpy).toHaveBeenCalledWith(
+        'ticTacToeGameStats',
+        JSON.stringify(expect.objectContaining({
+          totalGamesPlayed: 1,
+          pvp: { X: 0, O: 0, draws: 0 },
+          pva: { playerXWins: 0, aiOWins: 0, draws: 1 },
+        }))
+      );
+    });
+    expect(screen.getByText('Total Games').nextElementSibling?.textContent).toBe('1');
+    const pvaDraws = screen.getAllByText('Draws').find(el => el.closest('.mt-3'));
+    expect(pvaDraws?.nextElementSibling?.textContent).toBe('1');
+  });
+
+  test('resetStats clears all statistics and updates localStorage', async () => {
+    const mockStats = {
+      totalGamesPlayed: 5,
+      pvp: { X: 2, O: 1, draws: 1 },
+      pva: { playerXWins: 1, aiOWins: 0, draws: 0 },
+    };
+    localStorageGetItemSpy.mockReturnValue(JSON.stringify(mockStats));
+    render(<App />);
+
+    // Verify initial loaded stats
+    expect(screen.getByText('Total Games').nextElementSibling?.textContent).toBe('5');
+
+    fireEvent.click(screen.getByRole('button', { name: /Reset All/i }));
+
+    await waitFor(() => {
+      expect(localStorageSetItemSpy).toHaveBeenCalledWith(
+        'ticTacToeGameStats',
+        JSON.stringify({ // initialGameStats
+          totalGamesPlayed: 0,
+          pvp: { X: 0, O: 0, draws: 0 },
+          pva: { playerXWins: 0, aiOWins: 0, draws: 0 },
+        })
+      );
+    });
+    expect(screen.getByText('Total Games').nextElementSibling?.textContent).toBe('0');
+    // Check a few other stats to ensure they are reset
+    expect(screen.getByText('Player X').nextElementSibling?.textContent).toBe('0');
+    // If PvA mode was active, those would be visible, but default is PvP
+    const drawElements = screen.getAllByText('Draws');
+    expect(drawElements.find(el => el.closest('.mt-3'))?.nextElementSibling?.textContent).toBe('0');
+  });
+});
