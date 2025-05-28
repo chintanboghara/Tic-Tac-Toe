@@ -39,3 +39,25 @@ export function checkDraw(squares: Array<string | null>): boolean {
   // A draw occurs if all squares are filled and there is no winner.
   return squares.every(square => square !== null);
 }
+
+/**
+ * Get a move for the Easy AI.
+ * The Easy AI randomly picks an available square.
+ * @param board The current state of the board (Array<string | null>)
+ * @returns The index of the chosen square, or null if no moves are available.
+ */
+export function getEasyAIMove(board: Array<string | null>): number | null {
+  const emptySquares: number[] = [];
+  board.forEach((square, index) => {
+    if (square === null) {
+      emptySquares.push(index);
+    }
+  });
+
+  if (emptySquares.length === 0) {
+    return null; // No available moves
+  }
+
+  const randomIndex = Math.floor(Math.random() * emptySquares.length);
+  return emptySquares[randomIndex];
+}

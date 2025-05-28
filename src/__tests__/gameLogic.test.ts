@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { calculateWinner, checkDraw } from '../utils/gameLogic';
+import { describe, it, expect, test } from 'vitest'; // Added test
+import { calculateWinner, checkDraw, getEasyAIMove } from '../utils/gameLogic'; // Added getEasyAIMove
 
 describe('Game Logic', () => {
   describe('calculateWinner', () => {
@@ -49,4 +49,50 @@ describe('Game Logic', () => {
       expect(checkDraw(board)).toBe(true);
     });
   });
+
+  describe('getEasyAIMove', () => {
+    test('should return a valid empty square index from a partially filled board', () => {
+      const board = ['X', null, 'O', 'X', 'O', null, null, 'X', 'O'];
+      // Expected empty indices: 1, 5, 6
+      const emptyIndices = [1, 5, 6];
+      const move = getEasyAIMove(board);
+      expect(move).not.toBeNull();
+      // Ensure the move is one of the known empty spots
+      expect(emptyIndices).toContain(move);
+      // Ensure the chosen spot was indeed null on the original board
+      expect(board[move!]).toBeNull();
+    });
+
+    test('should return the only available empty square', () => {
+      const board = ['X', 'O', 'X', 'O', 'X', 'O', 'O', 'X', null];
+      const move = getEasyAIMove(board);
+      expect(move).toBe(8);
+    });
+
+    test('should return one of the two available empty squares', () => {
+      const board = ['X', 'O', 'X', 'O', 'X', 'O', 'O', null, null];
+      const emptyIndices = [7, 8];
+      const move = getEasyAIMove(board);
+      expect(move).not.toBeNull();
+      expect(emptyIndices).toContain(move);
+      expect(board[move!]).toBeNull();
+    });
+
+    test('should return null if the board is full', () => {
+      const board = ['X', 'O', 'X', 'O', 'X', 'O', 'O', 'X', 'O'];
+      const move = getEasyAIMove(board);
+      expect(move).toBeNull();
+    });
+
+    test('should return null if the board is empty but passed as non-empty (edge case, though AI should not be called)', () => {
+      // This tests if the logic correctly handles an empty board if, for some reason, it's called.
+      const board = [null, null, null, null, null, null, null, null, null];
+      const move = getEasyAIMove(board);
+      expect(move).not.toBeNull(); // Should pick a square
+      expect(move! >= 0 && move! <= 8).toBe(true);
+      expect(board[move!]).toBeNull();
+    });
+  });
 });
+// Make sure to import getEasyAIMove at the top of the file
+// import { calculateWinner, checkDraw, getEasyAIMove } from '../utils/gameLogic';
