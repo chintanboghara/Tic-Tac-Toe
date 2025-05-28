@@ -46,6 +46,12 @@ function App() {
   const [gameStatus, setGameStatus] = useState<'playing' | 'won' | 'draw'>('playing');
   const [winningLine, setWinningLine] = useState<number[] | null>(null);
 
+  // State for human player's symbol choice
+  const [humanPlayerSymbol, setHumanPlayerSymbol] = useState<PlayerSymbol>(() => {
+    const storedSymbol = localStorage.getItem('ticTacToeHumanSymbol') as PlayerSymbol | null;
+    return storedSymbol || 'X'; // Default to 'X'
+  });
+
   // State for viewing game history
   const [viewingHistoryGame, setViewingHistoryGame] = useState<HistoricGame | null>(null);
   const [historyStep, setHistoryStep] = useState<number>(0);
@@ -59,6 +65,11 @@ function App() {
   useEffect(() => {
     localStorage.setItem('ticTacToeGameHistory', JSON.stringify(gameHistory));
   }, [gameHistory]);
+
+  // Persist humanPlayerSymbol to localStorage
+  useEffect(() => {
+    localStorage.setItem('ticTacToeHumanSymbol', humanPlayerSymbol);
+  }, [humanPlayerSymbol]);
 
   // Check for winner or draw & update gameStats and gameHistory
   useEffect(() => {
