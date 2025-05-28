@@ -455,10 +455,10 @@ function App() {
               <GameHistory history={gameHistory} onViewHistoricGame={handleViewHistoricGame} />
             </div>
           </div>
-        </div>
-      </div>
+        </div> {/* Closes "max-w-4xl w-full ..." div */}
+      </div> {/* Closes "min-h-screen bg-gradient-to-br ..." div */}
     </SoundProvider>
-    </ThemeProvider>
+  </ThemeProvider>
   );
 }
 
