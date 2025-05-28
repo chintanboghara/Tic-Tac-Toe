@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { RefreshCw, Award } from 'lucide-react';
+import { ThemeProvider } from './contexts/ThemeContext';
+import ThemeSwitcher from './components/ThemeSwitcher'; // Import ThemeSwitcher
 import Board from './components/Board';
 import ScoreBoard from './components/ScoreBoard';
 import GameHistory from './components/GameHistory';
@@ -99,38 +101,42 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-100 to-purple-100 flex flex-col items-center justify-center p-4">
-      <div className="max-w-4xl w-full bg-white rounded-xl shadow-lg overflow-hidden">
-        <div className="p-6 bg-indigo-600 text-white text-center">
-          <h1 className="text-3xl font-bold flex items-center justify-center gap-2">
-            <Award className="h-8 w-8" />
-            Tic Tac Toe
-          </h1>
-          <p className="text-indigo-200 mt-1">A classic game reimagined</p>
-        </div>
+    <ThemeProvider>
+      <div className="min-h-screen bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-slate-800 dark:to-gray-900 flex flex-col items-center justify-center p-4">
+        <div className="max-w-4xl w-full bg-white dark:bg-slate-850 rounded-xl shadow-lg overflow-hidden">
+          <div className="p-6 bg-indigo-600 dark:bg-indigo-700 text-white text-center relative">
+            <h1 className="text-3xl font-bold flex items-center justify-center gap-2">
+              <Award className="h-8 w-8" />
+              Tic Tac Toe
+            </h1>
+            <p className="text-indigo-200 dark:text-indigo-300 mt-1">A classic game reimagined</p>
+            <div className="absolute top-4 right-4">
+              <ThemeSwitcher />
+            </div>
+          </div>
 
-        <div className="p-6 md:p-8">
+          <div className="p-6 md:p-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Player Name Inputs */}
             <div className="md:col-span-3 mb-4 flex flex-col sm:flex-row gap-4 justify-center">
               <div className="flex items-center gap-2">
-                <label htmlFor="playerXName" className="text-sm font-medium text-gray-700">Player X Name:</label>
+                <label htmlFor="playerXName" className="text-sm font-medium text-gray-700 dark:text-gray-200">Player X Name:</label>
                 <input
                   type="text"
                   id="playerXName"
                   value={playerXName}
                   onChange={(e) => setPlayerXName(e.target.value)}
-                  className="border p-1 rounded w-full sm:w-auto"
+                  className="border p-1 rounded w-full sm:w-auto dark:bg-slate-700 dark:text-white dark:border-slate-600"
                 />
               </div>
               <div className="flex items-center gap-2">
-                <label htmlFor="playerOName" className="text-sm font-medium text-gray-700">Player O Name:</label>
+                <label htmlFor="playerOName" className="text-sm font-medium text-gray-700 dark:text-gray-200">Player O Name:</label>
                 <input
                   type="text"
                   id="playerOName"
                   value={playerOName}
                   onChange={(e) => setPlayerOName(e.target.value)}
-                  className="border p-1 rounded w-full sm:w-auto"
+                  className="border p-1 rounded w-full sm:w-auto dark:bg-slate-700 dark:text-white dark:border-slate-600"
                 />
               </div>
             </div>
@@ -139,26 +145,26 @@ function App() {
             {/* Game section */}
             <div className="md:col-span-2 flex flex-col items-center">
             <div className="mb-4 text-center">
-              <h2 className="text-xl font-semibold text-indigo-800">{getStatusMessage()}</h2>
+              <h2 className="text-xl font-semibold text-indigo-800 dark:text-indigo-300">{getStatusMessage()}</h2>
             </div>
             
-            <Board 
+            <Board
               squares={board} 
               onClick={handleClick} 
               winningLine={winningLine}
             />
             
             <div className="mt-6 flex gap-4">
-              <button 
+              <button
                 onClick={resetGame}
-                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-lg transition-colors"
+                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-500 dark:hover:bg-indigo-600 py-2 px-4 rounded-lg transition-colors"
               >
                 <RefreshCw className="h-4 w-4" />
                 New Game
               </button>
-              <button 
+              <button
                 onClick={resetStats}
-                className="bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded-lg transition-colors"
+                className="bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-gray-600 dark:hover:bg-gray-700 dark:text-gray-200 py-2 px-4 rounded-lg transition-colors"
               >
                 Reset All
               </button>
@@ -174,6 +180,7 @@ function App() {
         </div>
       </div>
     </div>
+    </ThemeProvider>
   );
 }
 

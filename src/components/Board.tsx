@@ -21,7 +21,7 @@ const Board: React.FC<BoardProps> = ({ squares, onClick, winningLine }) => {
   };
 
   return (
-    <div className="grid grid-cols-3 gap-2 w-full max-w-xs">
+    <div className="grid grid-cols-3 gap-2 w-full max-w-xs p-1 bg-gray-200 dark:bg-slate-900 rounded-lg">
       {Array(9).fill(null).map((_, i) => (
         <div key={i}>
           {renderSquare(i)}

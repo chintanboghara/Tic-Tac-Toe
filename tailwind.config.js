@@ -5,6 +5,7 @@ export default {
     './index.html',
     './src/**/*.{js,ts,jsx,tsx}',
   ],
+  darkMode: 'class', // Enabled class-based dark mode
   theme: {
     // Extend Tailwind's default theme here
     extend: {
