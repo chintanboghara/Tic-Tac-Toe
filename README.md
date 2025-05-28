@@ -16,6 +16,7 @@ A modern implementation of the classic Tic Tac Toe game built with React, TypeSc
 - **AI Opponent (Easy):** Challenge a computer-controlled opponent! Select "Play vs AI (Easy)" mode from the options above the player name inputs to play against an AI with an "Easy" difficulty (makes random valid moves).
 - **Subtle Animations:** Enjoy smooth animations for placing marks (X/O) and highlighting the winning line, enhancing the visual feedback.
 - **Sound Effects:** Audible feedback for game actions (moves, wins, draws, button clicks). Includes a toggle button (volume icon) in the header to mute/unmute sounds.
+- **Detailed Game Statistics:** Tracks your performance with stats for total games played, plus separate win, loss (for Player X in PvA), and draw counts for both "Player vs Player" and "Player vs AI" game modes. Statistics are saved locally in your browser.
 
 ## Technologies Used
 
