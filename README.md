@@ -12,6 +12,7 @@ A modern implementation of the classic Tic Tac Toe game built with React, TypeSc
 - **Winning Highlights:** Winning combinations are visually emphasized.
 - **Reset Options:** Easily reset the game board and statistics.
 - **Responsive Design:** Optimized for all devices.
+- **Theme Customization:** Switch between light and dark modes using the sun/moon icon button located in the top-right of the header.
 
 ## Technologies Used
 
