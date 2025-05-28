@@ -56,6 +56,20 @@ const GameHistory: React.FC<GameHistoryProps> = ({ history }) => {
                   {formatDate(game.date)}
                 </span>
               </div>
+              {/* Mini-board display */}
+              <div className="mt-2 grid grid-cols-3 gap-0.5 w-16 h-16 border border-gray-300 bg-gray-100 p-0.5 rounded">
+                {game.board.map((square, i) => (
+                  <div 
+                    key={i} 
+                    className={`w-full h-full flex items-center justify-center text-lg font-bold rounded-sm
+                                ${square === 'X' ? 'text-indigo-500 bg-indigo-100' : 
+                                  square === 'O' ? 'text-purple-500 bg-purple-100' : 
+                                  'bg-gray-200'}`}
+                  >
+                    {square}
+                  </div>
+                ))}
+              </div>
             </div>
           ))
         )}

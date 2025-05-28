@@ -35,11 +35,7 @@ export function calculateWinner(squares: Array<string | null>) {
  * @returns True if the game is a draw, false otherwise
  */
 export function checkDraw(squares: Array<string | null>): boolean {
-  // If there's a winner, it's not a draw
-  if (calculateWinner(squares)) {
-    return false;
-  }
-  
-  // If all squares are filled, it's a draw
+  // Assumes calculateWinner has already been checked and returned no winner.
+  // A draw occurs if all squares are filled and there is no winner.
   return squares.every(square => square !== null);
 }
