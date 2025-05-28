@@ -106,6 +106,205 @@ describe('App Component - Player Name Functionality', () => {
   });
 });
 
+describe('App Component - Choose Your Symbol & Game Logic', () => {
+  let localStorageGetItemSpy: jest.SpyInstance;
+  let localStorageSetItemSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    localStorageGetItemSpy = jest.spyOn(Storage.prototype, 'getItem');
+    localStorageSetItemSpy = jest.spyOn(Storage.prototype, 'setItem');
+    (mockGetEasyAIMove as jest.Mock).mockClear();
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    localStorageGetItemSpy.mockRestore();
+    localStorageSetItemSpy.mockRestore();
+    localStorage.clear();
+    act(() => { jest.runOnlyPendingTimers(); });
+    jest.useRealTimers();
+  });
+  
+  const getSquares = () => screen.getAllByRole('button', { name: /square/i });
+  const getSymbolButton = (symbol: 'X' | 'O') => screen.getByRole('button', { name: `Play as ${symbol}`});
+  const getGameModeButton = (modeText: RegExp) => screen.getByRole('button', { name: modeText });
+  const getNewGameButton = () => screen.getByRole('button', { name: /New Game/i });
+
+  test('default human symbol is X and X starts first in PvP', () => {
+    localStorageGetItemSpy.mockReturnValue(null); // Ensure no stored symbol
+    render(<App />);
+    expect(getSymbolButton('X')).toHaveClass('bg-indigo-500'); // Active style for X
+    expect(getSymbolButton('O')).not.toHaveClass('bg-purple-500');
+    // Default name for X is "Player X"
+    expect(screen.getByText(/Next player: Player X \(X\)/i)).toBeInTheDocument();
+  });
+
+  test('selecting O changes symbol, resets game, and O starts first in PvP', () => {
+    render(<App />);
+    fireEvent.click(getSymbolButton('O'));
+    expect(getSymbolButton('O')).toHaveClass('bg-purple-500'); // Active style for O
+    expect(getSymbolButton('X')).not.toHaveClass('bg-indigo-500');
+    expect(localStorageSetItemSpy).toHaveBeenCalledWith('ticTacToeHumanSymbol', 'O');
+    // Board should be empty (reset)
+    getSquares().forEach(sq => expect(sq).toBeEmptyDOMElement());
+    // Default name for O is "Player O"
+    expect(screen.getByText(/Next player: Player O \(O\)/i)).toBeInTheDocument(); 
+  });
+
+  test('symbol selection buttons are disabled after game starts', () => {
+    render(<App />);
+    fireEvent.click(getSquares()[0]); // X makes a move
+    expect(getSymbolButton('X')).toBeDisabled();
+    expect(getSymbolButton('O')).toBeDisabled();
+  });
+
+  test('symbol selection buttons are disabled during history view', async () => {
+    render(<App />);
+    // Play a game to create history
+    fireEvent.click(getSquares()[0]); fireEvent.click(getSquares()[1]);
+    fireEvent.click(getSquares()[2]); fireEvent.click(getSquares()[3]);
+    fireEvent.click(getSquares()[4]); fireEvent.click(getSquares()[5]);
+    fireEvent.click(getSquares()[6]); // X wins
+    
+    await waitFor(() => {
+      expect(screen.getAllByRole('button', { name: /View details for game played on/i })[0]).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getAllByRole('button', { name: /View details for game played on/i })[0]);
+    
+    expect(getSymbolButton('X')).toBeDisabled();
+    expect(getSymbolButton('O')).toBeDisabled();
+  });
+
+  test('Human as X starts first in PvP', () => {
+    render(<App />);
+    fireEvent.click(getSymbolButton('X')); // Explicitly select X
+    expect(screen.getByText(/Next player: Player X \(X\)/i)).toBeInTheDocument();
+  });
+
+  test('Human as O starts first in PvP', () => {
+    render(<App />);
+    fireEvent.click(getSymbolButton('O'));
+    // When human is O, Player O (human) is next
+    expect(screen.getByText(/Next player: Player O \(O\)/i)).toBeInTheDocument();
+  });
+
+  test('Human as X, AI is O, AI makes O move', async () => {
+    render(<App />);
+    fireEvent.click(getSymbolButton('X'));
+    fireEvent.click(getGameModeButton(/Play vs AI \(Easy\)/i));
+    
+    (mockGetEasyAIMove as jest.Mock).mockReturnValue(1); // AI will play at index 1
+
+    fireEvent.click(getSquares()[0]); // Human (X) plays at 0
+    expect(getSquares()[0]).toHaveTextContent('X');
+    expect(screen.getByText(/Easy AI \(AI as O\) is thinking.../i)).toBeInTheDocument();
+
+    act(() => { jest.advanceTimersByTime(1000); });
+
+    await waitFor(() => expect(getSquares()[1]).toHaveTextContent('O'));
+  });
+
+  test('Human as O, AI is X, AI makes X move', async () => {
+    render(<App />);
+    fireEvent.click(getSymbolButton('O'));
+    fireEvent.click(getGameModeButton(/Play vs AI \(Easy\)/i));
+    
+    // AI (X) should make the first move
+    (mockGetEasyAIMove as jest.Mock).mockReturnValue(0); 
+    expect(screen.getByText(/Easy AI \(AI as X\) is thinking.../i)).toBeInTheDocument();
+    
+    act(() => { jest.advanceTimersByTime(1000); });
+    await waitFor(() => expect(getSquares()[0]).toHaveTextContent('X'));
+
+    // Now human (O) plays
+    expect(screen.getByText(/Your Turn \(Player O - O\)/i)).toBeInTheDocument();
+    fireEvent.click(getSquares()[1]); // Human (O) plays at 1
+    expect(getSquares()[1]).toHaveTextContent('O');
+  });
+
+  test('Human as O wins PvA, pva.humanWins increments', async () => {
+    localStorageGetItemSpy.mockReturnValue(null); // Clear stats
+    render(<App />);
+    fireEvent.click(getSymbolButton('O'));
+    fireEvent.click(getGameModeButton(/Play vs AI \(Easy\)/i));
+
+    // Human (O) moves: 0, 1, 2 (wins)
+    // AI (X) moves: 3, 4
+    (mockGetEasyAIMove as jest.Mock).mockReturnValueOnce(3).mockReturnValueOnce(4);
+
+    fireEvent.click(getSquares()[0]); // Human (O)
+    act(() => { jest.advanceTimersByTime(1000); }); // AI (X) at 3
+    fireEvent.click(getSquares()[1]); // Human (O)
+    act(() => { jest.advanceTimersByTime(1000); }); // AI (X) at 4
+    fireEvent.click(getSquares()[2]); // Human (O) wins
+
+    await waitFor(() => {
+      expect(localStorageSetItemSpy).toHaveBeenCalledWith(
+        'ticTacToeGameStats',
+        JSON.stringify(expect.objectContaining({ pva: { humanWins: 1, aiWins: 0, draws: 0 } }))
+      );
+    });
+    expect(screen.getByText(/Player O \(You as O\) win!/i)).toBeInTheDocument();
+  });
+
+  test('Human as X wins PvA, pva.humanWins increments', async () => {
+    localStorageGetItemSpy.mockReturnValue(null); // Clear stats
+    render(<App />);
+    fireEvent.click(getSymbolButton('X')); // Default, but explicit for clarity
+    fireEvent.click(getGameModeButton(/Play vs AI \(Easy\)/i));
+
+    // Human (X) moves: 0, 1, 2 (wins)
+    // AI (O) moves: 3, 4
+    (mockGetEasyAIMove as jest.Mock).mockReturnValueOnce(3).mockReturnValueOnce(4);
+
+    fireEvent.click(getSquares()[0]); // Human (X)
+    act(() => { jest.advanceTimersByTime(1000); }); // AI (O) at 3
+    fireEvent.click(getSquares()[1]); // Human (X)
+    act(() => { jest.advanceTimersByTime(1000); }); // AI (O) at 4
+    fireEvent.click(getSquares()[2]); // Human (X) wins
+
+    await waitFor(() => {
+      expect(localStorageSetItemSpy).toHaveBeenCalledWith(
+        'ticTacToeGameStats',
+        JSON.stringify(expect.objectContaining({ pva: { humanWins: 1, aiWins: 0, draws: 0 } }))
+      );
+    });
+    expect(screen.getByText(/Player X \(You as X\) win!/i)).toBeInTheDocument();
+  });
+
+  test('status messages are correct when human is O in PvA', async () => {
+    render(<App />);
+    fireEvent.click(getSymbolButton('O'));
+    fireEvent.click(getGameModeButton(/Play vs AI \(Easy\)/i));
+    
+    // AI (X) is thinking (because Human is O, so X is AI and X starts)
+    (mockGetEasyAIMove as jest.Mock).mockReturnValue(0); // AI will play at 0
+    expect(screen.getByText(/Easy AI \(AI as X\) is thinking.../i)).toBeInTheDocument();
+    
+    act(() => { jest.advanceTimersByTime(1000); }); // AI makes move
+    await waitFor(() => expect(getSquares()[0]).toHaveTextContent('X'));
+
+    expect(screen.getByText(/Your Turn \(Player O - O\)/i)).toBeInTheDocument();
+  });
+  
+  test('Scoreboard displays correctly when human is O in PvA', async () => {
+    render(<App />);
+    fireEvent.click(getSymbolButton('O'));
+    fireEvent.click(getGameModeButton(/Play vs AI \(Easy\)/i));
+
+    // Human is Player O (You), AI is Player X (Easy AI)
+    expect(screen.getByText(/Player O \(You\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/Easy AI/i)).toBeInTheDocument(); // AI name shown
+    
+    // Find the score elements next to these names
+    const humanScoreElement = screen.getByText(/Player O \(You\)/i).parentElement?.nextElementSibling;
+    const aiScoreElement = screen.getByText(/Easy AI/i).parentElement?.nextElementSibling;
+
+    expect(humanScoreElement?.textContent).toBe('0'); // Initial score
+    expect(aiScoreElement?.textContent).toBe('0');   // Initial score
+  });
+});
+
 describe('App Component - History View Functionality', () => {
   let localStorageGetItemSpy: jest.SpyInstance;
   let localStorageSetItemSpy: jest.SpyInstance;
