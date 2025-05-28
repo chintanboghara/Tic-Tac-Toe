@@ -1,13 +1,17 @@
-import React, { useState, useEffect, useCallback } from 'react'; // Added useCallback
+import React, { useState, useEffect, useCallback } from 'react';
 import { RefreshCw, Award } from 'lucide-react';
 import { ThemeProvider } from './contexts/ThemeContext';
-import ThemeSwitcher from './components/ThemeSwitcher'; // Import ThemeSwitcher
+import { SoundProvider, useSounds } from './contexts/SoundContext';
+import ThemeSwitcher from './components/ThemeSwitcher';
+import SoundToggler from './components/SoundToggler'; // Import SoundToggler
 import Board from './components/Board';
 import ScoreBoard from './components/ScoreBoard';
 import GameHistory from './components/GameHistory';
 import { calculateWinner, checkDraw, getEasyAIMove } from './utils/gameLogic'; // Added getEasyAIMove
 
 function App() {
+  const { playSound } = useSounds(); // Initialize playSound
+
   // Game state
   const [board, setBoard] = useState(Array(9).fill(null));
   const [xIsNext, setXIsNext] = useState(true);
@@ -42,6 +46,7 @@ function App() {
         ...prev, 
         { winner: result.winner, board: [...board], date: new Date() }
       ]);
+      playSound('win'); // Play win sound
     } else if (checkDraw(board)) {
       setGameStatus('draw');
       
@@ -56,8 +61,9 @@ function App() {
         ...prev, 
         { winner: null, board: [...board], date: new Date() }
       ]);
+      playSound('draw'); // Play draw sound
     }
-  }, [board]);
+  }, [board, playSound]); // Added playSound
 
   // Handle square click - wrapped with useCallback
   const handleClick = useCallback((index: number) => {
@@ -67,8 +73,9 @@ function App() {
     newBoard[index] = xIsNext ? 'X' : 'O';
 
     setBoard(newBoard);
+    playSound('move'); // Play move sound
     setXIsNext(!xIsNext);
-  }, [board, xIsNext, gameStatus]);
+  }, [board, xIsNext, gameStatus, playSound]); // Added playSound
 
   // useEffect for AI's turn
   useEffect(() => {
@@ -84,19 +91,20 @@ function App() {
   }, [xIsNext, gameMode, gameStatus, board, handleClick]);
 
   // Reset the game
-  const resetGame = () => {
+  const resetGame = useCallback(() => { // Wrapped in useCallback for stability if used in other effects
     setBoard(Array(9).fill(null));
     setXIsNext(true);
     setGameStatus('playing');
     setWinningLine(null);
-  };
+  }, []); // No dependencies, this function is stable
 
   // Reset all stats
-  const resetStats = () => {
+  const resetStats = useCallback(() => {
     resetGame();
     setScores({ X: 0, O: 0, draws: 0 });
     setGameHistory([]);
-  };
+    playSound('click'); // Play click sound for reset all
+  }, [resetGame, playSound]);
 
   // Get current game status message
   const getStatusMessage = () => {
@@ -120,16 +128,18 @@ function App() {
 
   return (
     <ThemeProvider>
-      <div className="min-h-screen bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-slate-800 dark:to-gray-900 flex flex-col items-center justify-center p-4">
-        <div className="max-w-4xl w-full bg-white dark:bg-slate-850 rounded-xl shadow-lg overflow-hidden">
-          <div className="p-6 bg-indigo-600 dark:bg-indigo-700 text-white text-center relative">
+      <SoundProvider> {/* SoundProvider wraps the main content */}
+        <div className="min-h-screen bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-slate-800 dark:to-gray-900 flex flex-col items-center justify-center p-4">
+          <div className="max-w-4xl w-full bg-white dark:bg-slate-850 rounded-xl shadow-lg overflow-hidden">
+            <div className="p-6 bg-indigo-600 dark:bg-indigo-700 text-white text-center relative">
             <h1 className="text-3xl font-bold flex items-center justify-center gap-2">
               <Award className="h-8 w-8" />
               Tic Tac Toe
             </h1>
             <p className="text-indigo-200 dark:text-indigo-300 mt-1">A classic game reimagined</p>
-            <div className="absolute top-4 right-4">
+            <div className="absolute top-4 right-4 flex gap-2"> {/* Use flex container */}
               <ThemeSwitcher />
+              <SoundToggler /> {/* Add SoundToggler */}
             </div>
           </div>
 
@@ -143,6 +153,7 @@ function App() {
                   if (playerOName === "Easy AI") {
                     setPlayerOName("Player O"); // Reset P2 name
                   }
+                  playSound('click');
                 }}
                 className={`py-2 px-4 rounded-lg transition-colors
                             ${gameMode === 'twoPlayer' ? 'bg-blue-500 text-white dark:bg-blue-600' : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'}`}
@@ -154,6 +165,7 @@ function App() {
                   setGameMode('vsAI');
                   resetGame();
                   setPlayerOName("Easy AI"); // Set AI name
+                  playSound('click');
                 }}
                 className={`py-2 px-4 rounded-lg transition-colors
                             ${gameMode === 'vsAI' ? 'bg-green-500 text-white dark:bg-green-600' : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'}`}
@@ -202,14 +214,17 @@ function App() {
             
             <div className="mt-6 flex gap-4">
               <button
-                onClick={resetGame}
+                onClick={() => {
+                  resetGame();
+                  playSound('click');
+                }}
                 className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-500 dark:hover:bg-indigo-600 py-2 px-4 rounded-lg transition-colors"
               >
                 <RefreshCw className="h-4 w-4" />
                 New Game
               </button>
               <button
-                onClick={resetStats}
+                onClick={resetStats} // resetStats already calls playSound('click')
                 className="bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-gray-600 dark:hover:bg-gray-700 dark:text-gray-200 py-2 px-4 rounded-lg transition-colors"
               >
                 Reset All
@@ -225,7 +240,7 @@ function App() {
           </div>
         </div>
       </div>
-    </div>
+    </SoundProvider>
     </ThemeProvider>
   );
 }
