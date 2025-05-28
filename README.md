@@ -17,6 +17,7 @@ A modern implementation of the classic Tic Tac Toe game built with React, TypeSc
 - **Subtle Animations:** Enjoy smooth animations for placing marks (X/O) and highlighting the winning line, enhancing the visual feedback.
 - **Sound Effects:** Audible feedback for game actions (moves, wins, draws, button clicks). Includes a toggle button (volume icon) in the header to mute/unmute sounds.
 - **Detailed Game Statistics:** Tracks your performance with stats for total games played, plus separate win, loss (for Player X in PvA), and draw counts for both "Player vs Player" and "Player vs AI" game modes. Statistics are saved locally in your browser.
+- **Game Replay (History View):** Review your past games move by move! Click on any game in the "Game History" list to enter replay mode. Use the "Previous Move" and "Next Move" buttons to step through the board states of that game. Click "Return to Current Game" to exit the replay.
 
 ## Technologies Used
 

@@ -106,6 +106,223 @@ describe('App Component - Player Name Functionality', () => {
   });
 });
 
+describe('App Component - History View Functionality', () => {
+  let localStorageGetItemSpy: jest.SpyInstance;
+  let localStorageSetItemSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    localStorageGetItemSpy = jest.spyOn(Storage.prototype, 'getItem');
+    localStorageSetItemSpy = jest.spyOn(Storage.prototype, 'setItem');
+    (mockGetEasyAIMove as jest.Mock).mockClear(); // Clear AI move mock if used in setup
+    jest.useFakeTimers(); // Use fake timers if any delays are involved (e.g., AI thinking)
+  });
+
+  afterEach(() => {
+    localStorageGetItemSpy.mockRestore();
+    localStorageSetItemSpy.mockRestore();
+    localStorage.clear();
+    act(() => {
+      jest.runOnlyPendingTimers();
+    });
+    jest.useRealTimers();
+  });
+
+  // Helper function to play a game and return the board squares
+  const playGame = (moves: number[]) => {
+    const boardSquares = screen.getAllByRole('button', { name: /square/i });
+    moves.forEach(moveIndex => {
+      fireEvent.click(boardSquares[moveIndex]);
+    });
+    return screen.getAllByRole('button', { name: /square/i }); // Return updated squares
+  };
+  
+  // Test Case 1: Storing history of moves and entering history view
+  test('stores game moves, allows entering history view, and shows correct initial historic board', async () => {
+    localStorageGetItemSpy.mockReturnValue(null); // Start with empty history
+    render(<App />);
+
+    // Play a short game: X wins
+    // X O .
+    // X O .
+    // X . .
+    playGame([0, 3, 1, 4, 2]); // X moves: 0, 1, 2. O moves: 3, 4
+    
+    await waitFor(() => {
+      // Check that a game has been added to history
+      expect(screen.getAllByRole('button', { name: /View details for game played on/i }).length).toBe(1);
+    });
+
+    // Click the first (and only) history item to view it
+    const historyItemButton = screen.getByRole('button', { name: /View details for game played on/i });
+    fireEvent.click(historyItemButton);
+
+    // Verify history view mode is active
+    expect(screen.getByText('History Navigation')).toBeInTheDocument();
+    expect(screen.getByText(/Viewing history: Move 5\/5/i)).toBeInTheDocument(); // 5 moves total
+
+    // Verify displayed board matches the last move of the historic game
+    const boardSquaresInHistory = screen.getAllByRole('button', { name: /square/i });
+    expect(boardSquaresInHistory[0]).toHaveTextContent('X');
+    expect(boardSquaresInHistory[1]).toHaveTextContent('X');
+    expect(boardSquaresInHistory[2]).toHaveTextContent('X');
+    expect(boardSquaresInHistory[3]).toHaveTextContent('O');
+    expect(boardSquaresInHistory[4]).toHaveTextContent('O');
+    expect(boardSquaresInHistory[5]).toBeEmptyDOMElement();
+
+    // Verify game controls are disabled
+    expect(screen.getByRole('button', { name: /New Game/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Reset All/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Play vs Player/i })).toHaveClass('opacity-50');
+    expect(screen.getByRole('button', { name: /Play vs AI \(Easy\)/i })).toHaveClass('opacity-50');
+    expect(screen.getByLabelText(/Player X Name:/i)).toBeDisabled();
+  });
+
+  // Test Case 2: Navigating History
+  test('allows navigating through historic moves', async () => {
+    localStorageGetItemSpy.mockReturnValue(null);
+    render(<App />);
+    playGame([0, 3, 1, 4, 2]); // X wins in 5 moves
+
+    await waitFor(() => {
+      expect(screen.getAllByRole('button', { name: /View details for game played on/i }).length).toBe(1);
+    });
+    fireEvent.click(screen.getByRole('button', { name: /View details for game played on/i }));
+    
+    const prevButton = screen.getByRole('button', { name: /Previous Move/i });
+    const nextButton = screen.getByRole('button', { name: /Next Move/i });
+
+    expect(nextButton).toBeDisabled(); // Starts at last move
+
+    // Go to 4th move (O at 4)
+    fireEvent.click(prevButton);
+    expect(screen.getByText(/Viewing history: Move 4\/5/i)).toBeInTheDocument();
+    let boardSquares = screen.getAllByRole('button', { name: /square/i });
+    expect(boardSquares[0]).toHaveTextContent('X');
+    expect(boardSquares[1]).toHaveTextContent('X');
+    expect(boardSquares[2]).toBeEmptyDOMElement(); // Square 2 was X's winning move
+    expect(boardSquares[3]).toHaveTextContent('O');
+    expect(boardSquares[4]).toHaveTextContent('O');
+    
+    // Go to 1st move (X at 0)
+    fireEvent.click(prevButton); // Move 3 (X at 1)
+    fireEvent.click(prevButton); // Move 2 (O at 3)
+    fireEvent.click(prevButton); // Move 1 (X at 0)
+    expect(screen.getByText(/Viewing history: Move 1\/5/i)).toBeInTheDocument();
+    expect(prevButton).toBeDisabled();
+    boardSquares = screen.getAllByRole('button', { name: /square/i });
+    expect(boardSquares[0]).toHaveTextContent('X');
+    expect(boardSquares[1]).toBeEmptyDOMElement();
+    expect(boardSquares[3]).toBeEmptyDOMElement();
+
+    // Go back to last move
+    fireEvent.click(nextButton); // Move 2
+    fireEvent.click(nextButton); // Move 3
+    fireEvent.click(nextButton); // Move 4
+    fireEvent.click(nextButton); // Move 5
+    expect(screen.getByText(/Viewing history: Move 5\/5/i)).toBeInTheDocument();
+    expect(nextButton).toBeDisabled();
+    boardSquares = screen.getAllByRole('button', { name: /square/i });
+    expect(boardSquares[2]).toHaveTextContent('X'); // Winning move visible again
+  });
+  
+  // Test Case 3: Exiting History View Mode
+  test('exits history view mode and reverts to current game state', async () => {
+    localStorageGetItemSpy.mockReturnValue(null);
+    render(<App />);
+    // Play a game, X makes first move
+    playGame([0]); // X at square 0
+    
+    // Simulate a second game that X wins (to have a history item)
+    fireEvent.click(screen.getByRole('button', { name: /New Game/i }));
+    playGame([0, 3, 1, 4, 2]); // X wins
+    
+    await waitFor(() => {
+      expect(screen.getAllByRole('button', { name: /View details for game played on/i }).length).toBe(1);
+    });
+    
+    // Store current live board state before entering history view
+    const liveBoardSquares = screen.getAllByRole('button', { name: /square/i }).map(sq => sq.textContent);
+
+    fireEvent.click(screen.getByRole('button', { name: /View details for game played on/i })); // View the completed game
+    expect(screen.getByText(/Viewing history: Move 5\/5/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Return to Current Game/i }));
+    
+    // Verify history navigation controls are gone
+    expect(screen.queryByText('History Navigation')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Viewing history:/i)).not.toBeInTheDocument();
+
+    // Verify board reverts to live game state (which was empty after New Game before the X win)
+    const currentBoardSquares = screen.getAllByRole('button', { name: /square/i });
+    currentBoardSquares.forEach((sq, index) => {
+        // The live game was reset, so the board should be empty.
+        // If a game was in progress, it should revert to that state.
+        // Since we did "New Game", then played a full game, then viewed that full game,
+        // exiting history should return to the live game state *after* the completed game.
+        // The problem is the `board` state is the one from the completed game.
+        // A "New Game" click after exiting history view is needed to truly test live board.
+        // For now, let's check it reverts to the `board` state which is the last completed game.
+        expect(sq.textContent).toBe(liveBoardSquares[index]);
+    });
+
+    // Verify game controls are re-enabled (assuming game is not over)
+    // Since the last live game state was a win, these should still be enabled for a new game.
+    expect(screen.getByRole('button', { name: /New Game/i })).not.toBeDisabled();
+  });
+  
+  // Test Case 4: Board Interactivity
+  test('board is not interactive during history view', async () => {
+    localStorageGetItemSpy.mockReturnValue(null);
+    render(<App />);
+    playGame([0, 3, 1, 4, 2]); // X wins
+
+    await waitFor(() => {
+      expect(screen.getAllByRole('button', { name: /View details for game played on/i }).length).toBe(1);
+    });
+    fireEvent.click(screen.getByRole('button', { name: /View details for game played on/i }));
+
+    const boardSquares = screen.getAllByRole('button', { name: /square/i });
+    // Attempt to click an empty square (e.g., square 5)
+    fireEvent.click(boardSquares[5]);
+    expect(boardSquares[5]).toBeEmptyDOMElement(); // Should remain empty, no new move
+    expect(screen.getByText(/Viewing history: Move 5\/5/i)).toBeInTheDocument(); // Still in history mode
+  });
+
+  // Test Case 5: Storing history of moves (already implicitly tested by entering history mode)
+  // This test case is more about the structure saved to localStorage if needed for direct inspection
+  test('stores detailed move history in localStorage', async () => {
+    localStorageGetItemSpy.mockReturnValue(null); // Ensure clean start
+    render(<App />);
+    
+    // Player X moves to 0, Player O moves to 3, Player X moves to 1
+    playGame([0, 3, 1]); 
+
+    // Simulate game end (e.g., X wins by playing at 2 after O plays at 4)
+    const squares = screen.getAllByRole('button', { name: /square/i });
+    fireEvent.click(squares[4]); // O
+    fireEvent.click(squares[2]); // X wins
+
+    await waitFor(() => {
+      expect(localStorageSetItemSpy).toHaveBeenCalledWith(
+        'ticTacToeGameHistory',
+        expect.stringContaining('"moves":') // Check that moves array is being saved
+      );
+    });
+
+    const gameHistoryCall = localStorageSetItemSpy.mock.calls.find(
+        (call) => call[0] === 'ticTacToeGameHistory'
+    );
+    const savedHistory = JSON.parse(gameHistoryCall![1]);
+    expect(savedHistory.length).toBe(1);
+    expect(savedHistory[0].moves.length).toBe(5); // 3 initial + 2 more
+    expect(savedHistory[0].moves[0].player).toBe('X');
+    expect(savedHistory[0].moves[0].board[0]).toBe('X');
+    expect(savedHistory[0].moves[1].player).toBe('O');
+    expect(savedHistory[0].moves[1].board[3]).toBe('O');
+    expect(savedHistory[0].winner).toBe('X');
+  });
+});
+
 describe('App Component - AI Mode', () => {
   beforeEach(() => {
     // Reset mocks before each test
