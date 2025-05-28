@@ -10,6 +10,8 @@ function App() {
   const [board, setBoard] = useState(Array(9).fill(null));
   const [xIsNext, setXIsNext] = useState(true);
   const [scores, setScores] = useState({ X: 0, O: 0, draws: 0 });
+  const [playerXName, setPlayerXName] = useState("Player X");
+  const [playerOName, setPlayerOName] = useState("Player O");
   const [gameHistory, setGameHistory] = useState<Array<{
     winner: string | null;
     board: Array<string | null>;
@@ -84,12 +86,15 @@ function App() {
   // Get current game status message
   const getStatusMessage = () => {
     if (gameStatus === 'won') {
-      const winner = !xIsNext ? 'X' : 'O';
-      return `Player ${winner} wins!`;
+      // The winner is determined by who was NOT xIsNext before the winning move
+      const winnerSymbol = !xIsNext ? 'X' : 'O'; 
+      const winnerName = winnerSymbol === 'X' ? playerXName : playerOName;
+      return `${winnerName} wins!`;
     } else if (gameStatus === 'draw') {
       return "It's a draw!";
     } else {
-      return `Next player: ${xIsNext ? 'X' : 'O'}`;
+      const nextPlayerName = xIsNext ? playerXName : playerOName;
+      return `Next player: ${nextPlayerName} (${xIsNext ? 'X' : 'O'})`;
     }
   };
 
@@ -103,10 +108,36 @@ function App() {
           </h1>
           <p className="text-indigo-200 mt-1">A classic game reimagined</p>
         </div>
-        
-        <div className="p-6 md:p-8 grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Game section */}
-          <div className="md:col-span-2 flex flex-col items-center">
+
+        <div className="p-6 md:p-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Player Name Inputs */}
+            <div className="md:col-span-3 mb-4 flex flex-col sm:flex-row gap-4 justify-center">
+              <div className="flex items-center gap-2">
+                <label htmlFor="playerXName" className="text-sm font-medium text-gray-700">Player X Name:</label>
+                <input
+                  type="text"
+                  id="playerXName"
+                  value={playerXName}
+                  onChange={(e) => setPlayerXName(e.target.value)}
+                  className="border p-1 rounded w-full sm:w-auto"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <label htmlFor="playerOName" className="text-sm font-medium text-gray-700">Player O Name:</label>
+                <input
+                  type="text"
+                  id="playerOName"
+                  value={playerOName}
+                  onChange={(e) => setPlayerOName(e.target.value)}
+                  className="border p-1 rounded w-full sm:w-auto"
+                />
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Game section */}
+            <div className="md:col-span-2 flex flex-col items-center">
             <div className="mb-4 text-center">
               <h2 className="text-xl font-semibold text-indigo-800">{getStatusMessage()}</h2>
             </div>
@@ -134,10 +165,11 @@ function App() {
             </div>
           </div>
           
-          {/* Stats section */}
-          <div className="flex flex-col gap-6">
-            <ScoreBoard scores={scores} />
-            <GameHistory history={gameHistory} />
+            {/* Stats section */}
+            <div className="flex flex-col gap-6">
+              <ScoreBoard scores={scores} playerXName={playerXName} playerOName={playerOName} />
+              <GameHistory history={gameHistory} />
+            </div>
           </div>
         </div>
       </div>
