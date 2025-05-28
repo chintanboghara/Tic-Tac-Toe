@@ -1,7 +1,14 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import App from '../../App'; // Adjust path as necessary
+import { getEasyAIMove as mockGetEasyAIMove } from '../../utils/gameLogic'; // Import the mock
+
+// Mock setup for gameLogic
+jest.mock('../../utils/gameLogic', () => ({
+  ...jest.requireActual('../../utils/gameLogic'), // Keep other functions
+  getEasyAIMove: jest.fn(),
+}));
 
 describe('App Component - Player Name Functionality', () => {
   // Test Case 1: Default Player Names
@@ -96,5 +103,77 @@ describe('App Component - Player Name Functionality', () => {
       fireEvent.click(squares[0]); // Alice (X) plays
       expect(screen.getByText(/Next player: Bob \(O\)/i)).toBeInTheDocument();
     });
+  });
+});
+
+describe('App Component - AI Mode', () => {
+  beforeEach(() => {
+    // Reset mocks before each test
+    (mockGetEasyAIMove as jest.Mock).mockClear();
+    jest.useFakeTimers(); // Use fake timers for setTimeout
+  });
+
+  afterEach(() => {
+    act(() => { // Ensure all timers are processed
+      jest.runOnlyPendingTimers();
+    });
+    jest.useRealTimers(); // Restore real timers
+  });
+
+  test('AI should make a move after player in "vs AI" mode', async () => {
+    render(<App />);
+    
+    // Switch to AI mode
+    fireEvent.click(screen.getByText(/Play vs AI \(Easy\)/i));
+    
+    // Mock AI's next move (e.g., to square 0, assuming it's empty after reset)
+    (mockGetEasyAIMove as jest.Mock).mockReturnValue(0);
+
+    // Player X makes a move (e.g., square 4)
+    const squares = screen.getAllByRole('button', { name: /square/i });
+    // Filter out ThemeSwitcher button if it's caught by "square" in aria-label (not the case here)
+    // Current Square component uses "Empty square" or "Square with X/O".
+    // ThemeSwitcher has "Switch to dark/light theme". So, no conflict expected.
+
+    fireEvent.click(squares[4]); // Player X clicks square 4 (index 4)
+
+    // Check that Player X's move is on the board
+    // Re-query squares as their labels/content change
+    let updatedSquares = screen.getAllByRole('button', { name: /square/i });
+    expect(updatedSquares[4]).toHaveTextContent('X');
+    expect(screen.getByText(/Easy AI is thinking.../i)).toBeInTheDocument();
+
+
+    // Advance timers to cover the AI's setTimeout
+    act(() => {
+      jest.advanceTimersByTime(1000); // Match AI delay (750ms) + buffer
+    });
+
+    await waitFor(() => {
+      expect(mockGetEasyAIMove).toHaveBeenCalled();
+    });
+
+    // Check if AI's move (square 0) is on the board
+    updatedSquares = screen.getAllByRole('button', { name: /square/i });
+    expect(updatedSquares[0]).toHaveTextContent('O');
+    
+    // Check if it's Player X's turn again
+    expect(screen.getByText(/Your Turn/i)).toBeInTheDocument();
+  });
+
+  test('Player O name input should be disabled in AI mode and show AI name', () => {
+    render(<App />);
+    
+    // Switch to AI mode
+    fireEvent.click(screen.getByText(/Play vs AI \(Easy\)/i));
+    
+    const playerOInput = screen.getByLabelText(/Player O Name:/i) as HTMLInputElement;
+    expect(playerOInput).toBeDisabled();
+    expect(playerOInput.value).toBe('Easy AI');
+
+    // Switch back to Player vs Player
+    fireEvent.click(screen.getByText(/Play vs Player/i));
+    expect(playerOInput).not.toBeDisabled();
+    expect(playerOInput.value).toBe('Player O'); // Resets to default "Player O"
   });
 });

@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react'; // Added useCallback
 import { RefreshCw, Award } from 'lucide-react';
 import { ThemeProvider } from './contexts/ThemeContext';
 import ThemeSwitcher from './components/ThemeSwitcher'; // Import ThemeSwitcher
 import Board from './components/Board';
 import ScoreBoard from './components/ScoreBoard';
 import GameHistory from './components/GameHistory';
-import { calculateWinner, checkDraw } from './utils/gameLogic';
+import { calculateWinner, checkDraw, getEasyAIMove } from './utils/gameLogic'; // Added getEasyAIMove
 
 function App() {
   // Game state
@@ -14,6 +14,7 @@ function App() {
   const [scores, setScores] = useState({ X: 0, O: 0, draws: 0 });
   const [playerXName, setPlayerXName] = useState("Player X");
   const [playerOName, setPlayerOName] = useState("Player O");
+  const [gameMode, setGameMode] = useState<'twoPlayer' | 'vsAI'>('twoPlayer'); // Added gameMode state
   const [gameHistory, setGameHistory] = useState<Array<{
     winner: string | null;
     board: Array<string | null>;
@@ -58,17 +59,29 @@ function App() {
     }
   }, [board]);
 
-  // Handle square click
-  const handleClick = (index: number) => {
-    // Return if square is filled or game is over
+  // Handle square click - wrapped with useCallback
+  const handleClick = useCallback((index: number) => {
     if (board[index] || gameStatus !== 'playing') return;
-    
+
     const newBoard = [...board];
     newBoard[index] = xIsNext ? 'X' : 'O';
-    
+
     setBoard(newBoard);
     setXIsNext(!xIsNext);
-  };
+  }, [board, xIsNext, gameStatus]);
+
+  // useEffect for AI's turn
+  useEffect(() => {
+    if (gameMode === 'vsAI' && !xIsNext && gameStatus === 'playing') {
+      const aiMove = getEasyAIMove(board);
+      if (aiMove !== null) {
+        const timer = setTimeout(() => {
+          handleClick(aiMove);
+        }, 750); // AI move delay
+        return () => clearTimeout(timer); // Cleanup timeout
+      }
+    }
+  }, [xIsNext, gameMode, gameStatus, board, handleClick]);
 
   // Reset the game
   const resetGame = () => {
@@ -88,13 +101,18 @@ function App() {
   // Get current game status message
   const getStatusMessage = () => {
     if (gameStatus === 'won') {
-      // The winner is determined by who was NOT xIsNext before the winning move
-      const winnerSymbol = !xIsNext ? 'X' : 'O'; 
+      const winnerSymbol = !xIsNext ? 'X' : 'O'; // The player who just made the move
+      if (gameMode === 'vsAI') {
+        return winnerSymbol === 'X' ? `${playerXName} (You) win!` : `${playerOName} wins!`;
+      }
       const winnerName = winnerSymbol === 'X' ? playerXName : playerOName;
       return `${winnerName} wins!`;
     } else if (gameStatus === 'draw') {
       return "It's a draw!";
-    } else {
+    } else { // Game is 'playing'
+      if (gameMode === 'vsAI') {
+        return xIsNext ? `Your Turn (${playerXName} - X)` : `${playerOName} is thinking...`;
+      }
       const nextPlayerName = xIsNext ? playerXName : playerOName;
       return `Next player: ${nextPlayerName} (${xIsNext ? 'X' : 'O'})`;
     }
@@ -116,9 +134,36 @@ function App() {
           </div>
 
           <div className="p-6 md:p-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Game Mode Selection */}
+            <div className="my-4 flex justify-center gap-4">
+              <button
+                onClick={() => {
+                  setGameMode('twoPlayer');
+                  resetGame();
+                  if (playerOName === "Easy AI") {
+                    setPlayerOName("Player O"); // Reset P2 name
+                  }
+                }}
+                className={`py-2 px-4 rounded-lg transition-colors
+                            ${gameMode === 'twoPlayer' ? 'bg-blue-500 text-white dark:bg-blue-600' : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'}`}
+              >
+                Play vs Player
+              </button>
+              <button
+                onClick={() => {
+                  setGameMode('vsAI');
+                  resetGame();
+                  setPlayerOName("Easy AI"); // Set AI name
+                }}
+                className={`py-2 px-4 rounded-lg transition-colors
+                            ${gameMode === 'vsAI' ? 'bg-green-500 text-white dark:bg-green-600' : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'}`}
+              >
+                Play vs AI (Easy)
+              </button>
+            </div>
+
             {/* Player Name Inputs */}
-            <div className="md:col-span-3 mb-4 flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="mb-4 flex flex-col sm:flex-row gap-4 justify-center">
               <div className="flex items-center gap-2">
                 <label htmlFor="playerXName" className="text-sm font-medium text-gray-700 dark:text-gray-200">Player X Name:</label>
                 <input
@@ -136,12 +181,13 @@ function App() {
                   id="playerOName"
                   value={playerOName}
                   onChange={(e) => setPlayerOName(e.target.value)}
-                  className="border p-1 rounded w-full sm:w-auto dark:bg-slate-700 dark:text-white dark:border-slate-600"
+                  disabled={gameMode === 'vsAI'} // Disable if AI mode
+                  className="border p-1 rounded w-full sm:w-auto dark:bg-slate-700 dark:text-white dark:border-slate-600 disabled:opacity-50"
                 />
               </div>
             </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-4"> {/* Added mt-4 for spacing after name inputs */}
             {/* Game section */}
             <div className="md:col-span-2 flex flex-col items-center">
             <div className="mb-4 text-center">
