@@ -293,7 +293,7 @@ function App() {
         </div>
         <div className="p-6 md:p-8">
           {/* Removed the main grid and other potentially problematic sections for now */}
-          <div className="text-center text-xl font-semibold mb-6" data-testid="status-message">
+          <div className="text-center text-xl font-semibold mb-6 text-gray-900 dark:text-slate-100" data-testid="status-message">
             {getStatusMessage()}
           </div>
 
@@ -330,7 +330,7 @@ function App() {
                     <button
                         onClick={() => handleSymbolChange('X')}
                         disabled={currentMoves.length > 0 || ((gameMode === 'vsEasyAI' || gameMode === 'vsMediumAI') && humanPlayerSymbol === 'O' && xIsNext)}
-                        className={`py-2 px-4 rounded-lg transition-colors text-lg font-bold ${humanPlayerSymbol === 'X' ? 'bg-blue-500 text-white dark:bg-blue-600' : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'} ${(currentMoves.length > 0 || ((gameMode === 'vsEasyAI' || gameMode === 'vsMediumAI') && humanPlayerSymbol === 'O' && xIsNext)) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        className={`py-2 px-4 rounded-lg transition-colors text-lg font-bold ${humanPlayerSymbol === 'X' ? 'bg-blue-500 text-white dark:bg-blue-600' : 'bg-gray-200 hover:bg-gray-300 dark:text-slate-100 dark:bg-gray-700 dark:hover:bg-gray-600'} ${(currentMoves.length > 0 || ((gameMode === 'vsEasyAI' || gameMode === 'vsMediumAI') && humanPlayerSymbol === 'O' && xIsNext)) ? 'opacity-50 cursor-not-allowed' : ''}`}
                         aria-label="Play as X"
                     >
                         Play as X
@@ -338,7 +338,7 @@ function App() {
                     <button
                         onClick={() => handleSymbolChange('O')}
                         disabled={currentMoves.length > 0 || ((gameMode === 'vsEasyAI' || gameMode === 'vsMediumAI') && humanPlayerSymbol === 'X' && !xIsNext)}
-                        className={`py-2 px-4 rounded-lg transition-colors text-lg font-bold ${humanPlayerSymbol === 'O' ? 'bg-red-500 text-white dark:bg-red-600' : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'} ${(currentMoves.length > 0 || ((gameMode === 'vsEasyAI' || gameMode === 'vsMediumAI') && humanPlayerSymbol === 'X' && !xIsNext)) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        className={`py-2 px-4 rounded-lg transition-colors text-lg font-bold ${humanPlayerSymbol === 'O' ? 'bg-red-500 text-white dark:bg-red-600' : 'bg-gray-200 hover:bg-gray-300 dark:text-slate-100 dark:bg-gray-700 dark:hover:bg-gray-600'} ${(currentMoves.length > 0 || ((gameMode === 'vsEasyAI' || gameMode === 'vsMediumAI') && humanPlayerSymbol === 'X' && !xIsNext)) ? 'opacity-50 cursor-not-allowed' : ''}`}
                         aria-label="Play as O"
                     >
                         Play as O
@@ -348,21 +348,21 @@ function App() {
                     <button
                         onClick={() => handleGameModeChange('twoPlayer')}
                         disabled={currentMoves.length > 0}
-                        className={`py-2 px-4 rounded-lg transition-colors ${gameMode === 'twoPlayer' ? 'bg-purple-500 text-white dark:bg-purple-600' : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'} ${currentMoves.length > 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        className={`py-2 px-4 rounded-lg transition-colors ${gameMode === 'twoPlayer' ? 'bg-purple-500 text-white dark:bg-purple-600' : 'bg-gray-200 hover:bg-gray-300 dark:text-slate-100 dark:bg-gray-700 dark:hover:bg-gray-600'} ${currentMoves.length > 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                         PvP
                     </button>
                     <button
                         onClick={() => handleGameModeChange('vsEasyAI')}
                         disabled={currentMoves.length > 0}
-                        className={`py-2 px-4 rounded-lg transition-colors ${gameMode === 'vsEasyAI' ? 'bg-teal-500 text-white dark:bg-teal-600' : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'} ${currentMoves.length > 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        className={`py-2 px-4 rounded-lg transition-colors ${gameMode === 'vsEasyAI' ? 'bg-teal-500 text-white dark:bg-teal-600' : 'bg-gray-200 hover:bg-gray-300 dark:text-slate-100 dark:bg-gray-700 dark:hover:bg-gray-600'} ${currentMoves.length > 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                         PvE (Easy)
                     </button>
                     <button
                         onClick={() => handleGameModeChange('vsMediumAI')}
                         disabled={currentMoves.length > 0}
-                        className={`py-2 px-4 rounded-lg transition-colors ${gameMode === 'vsMediumAI' ? 'bg-orange-500 text-white dark:bg-orange-600' : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'} ${currentMoves.length > 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        className={`py-2 px-4 rounded-lg transition-colors ${gameMode === 'vsMediumAI' ? 'bg-orange-500 text-white dark:bg-orange-600' : 'bg-gray-200 hover:bg-gray-300 dark:text-slate-100 dark:bg-gray-700 dark:hover:bg-gray-600'} ${currentMoves.length > 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                         PvE (Medium)
                     </button>
@@ -375,9 +375,9 @@ function App() {
             <div className="mb-6">
               <Board board={boardToDisplay} winningLine={lineToShow} onSquareClick={() => {}} canClick={false} />
               <div className="mt-4 flex justify-center items-center gap-2">
-                <button onClick={handleHistoryPrev} disabled={historyStep === 0} className="px-4 py-2 bg-gray-300 dark:bg-gray-600 rounded hover:bg-gray-400 dark:hover:bg-gray-500 disabled:opacity-50">Prev</button>
-                <span>Move {historyStep + 1} / {viewingHistoryGame.moves.length}</span>
-                <button onClick={handleHistoryNext} disabled={historyStep === viewingHistoryGame.moves.length - 1} className="px-4 py-2 bg-gray-300 dark:bg-gray-600 rounded hover:bg-gray-400 dark:hover:bg-gray-500 disabled:opacity-50">Next</button>
+                <button onClick={handleHistoryPrev} disabled={historyStep === 0} className="px-4 py-2 bg-gray-300 dark:text-slate-100 dark:bg-gray-600 rounded hover:bg-gray-400 dark:hover:bg-gray-500 disabled:opacity-50">Prev</button>
+                <span className="dark:text-slate-300">Move {historyStep + 1} / {viewingHistoryGame.moves.length}</span>
+                <button onClick={handleHistoryNext} disabled={historyStep === viewingHistoryGame.moves.length - 1} className="px-4 py-2 bg-gray-300 dark:text-slate-100 dark:bg-gray-600 rounded hover:bg-gray-400 dark:hover:bg-gray-500 disabled:opacity-50">Next</button>
                 <button onClick={handleExitHistoryView} className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700">Exit History</button>
               </div>
             </div>
@@ -392,7 +392,7 @@ function App() {
             <div className="text-center mb-6">
               <button
                 onClick={() => resetGame(false)} 
-                className="py-2 px-6 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-lg flex items-center justify-center gap-2 mx-auto"
+                className="py-2 px-6 bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 text-white rounded-lg transition-colors text-lg flex items-center justify-center gap-2 mx-auto"
                 aria-label="New Game"
               >
                 <RefreshCw size={20} /> New Game
