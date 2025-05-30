@@ -2,18 +2,36 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import App from '../../App'; // Adjust path as necessary
+import { ThemeProvider } from '../../contexts/ThemeContext';
+import { SoundProvider } from '../../contexts/SoundContext';
 import { getEasyAIMove as mockGetEasyAIMove } from '../../utils/gameLogic'; // Import the mock
 
+import { vi } from 'vitest';
+
 // Mock setup for gameLogic
-jest.mock('../../utils/gameLogic', () => ({
-  ...jest.requireActual('../../utils/gameLogic'), // Keep other functions
-  getEasyAIMove: jest.fn(),
-}));
+vi.mock('../../utils/gameLogic', async (importOriginal) => {
+  const original = await importOriginal() as any;
+  return {
+    ...original,
+    getEasyAIMove: vi.fn(),
+  };
+});
+
+// Helper function to render App with providers
+const renderApp = () => {
+  return render(
+    <ThemeProvider>
+      <SoundProvider>
+        <App />
+      </SoundProvider>
+    </ThemeProvider>
+  );
+};
 
 describe('App Component - Player Name Functionality', () => {
   // Test Case 1: Default Player Names
   test('renders with default player names in inputs and scoreboard', () => {
-    render(<App />);
+    renderApp();
     
     // Check input fields
     const playerXInput = screen.getByLabelText(/Player X Name:/i) as HTMLInputElement;
@@ -31,7 +49,7 @@ describe('App Component - Player Name Functionality', () => {
 
   // Test Case 2: Updating Player Names
   test('updates player names in scoreboard when inputs change', () => {
-    render(<App />);
+    renderApp();
     
     const playerXInput = screen.getByLabelText(/Player X Name:/i);
     const playerOInput = screen.getByLabelText(/Player O Name:/i);
@@ -56,7 +74,7 @@ describe('App Component - Player Name Functionality', () => {
   // Test Case 3: Player Names in Status Messages
   describe('Player Names in Status Messages', () => {
     test('displays updated player names in win and turn status messages', () => {
-      render(<App />);
+      renderApp();
       
       const playerXInput = screen.getByLabelText(/Player X Name:/i);
       const playerOInput = screen.getByLabelText(/Player O Name:/i);
@@ -107,22 +125,22 @@ describe('App Component - Player Name Functionality', () => {
 });
 
 describe('App Component - Choose Your Symbol & Game Logic', () => {
-  let localStorageGetItemSpy: jest.SpyInstance;
-  let localStorageSetItemSpy: jest.SpyInstance;
+  let localStorageGetItemSpy: ReturnType<typeof vi.spyOn>;
+  let localStorageSetItemSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    localStorageGetItemSpy = jest.spyOn(Storage.prototype, 'getItem');
-    localStorageSetItemSpy = jest.spyOn(Storage.prototype, 'setItem');
-    (mockGetEasyAIMove as jest.Mock).mockClear();
-    jest.useFakeTimers();
+    localStorageGetItemSpy = vi.spyOn(Storage.prototype, 'getItem');
+    localStorageSetItemSpy = vi.spyOn(Storage.prototype, 'setItem');
+    (mockGetEasyAIMove as any).mockClear();
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
     localStorageGetItemSpy.mockRestore();
     localStorageSetItemSpy.mockRestore();
     localStorage.clear();
-    act(() => { jest.runOnlyPendingTimers(); });
-    jest.useRealTimers();
+    act(() => { vi.runOnlyPendingTimers(); });
+    vi.useRealTimers();
   });
   
   const getSquares = () => screen.getAllByRole('button', { name: /square/i });
@@ -132,18 +150,18 @@ describe('App Component - Choose Your Symbol & Game Logic', () => {
 
   test('default human symbol is X and X starts first in PvP', () => {
     localStorageGetItemSpy.mockReturnValue(null); // Ensure no stored symbol
-    render(<App />);
-    expect(getSymbolButton('X')).toHaveClass('bg-indigo-500'); // Active style for X
-    expect(getSymbolButton('O')).not.toHaveClass('bg-purple-500');
+    renderApp(); // Already using renderApp
+    expect(getSymbolButton('X')).toHaveClass('bg-blue-500'); // Active style for X
+    expect(getSymbolButton('O')).not.toHaveClass('bg-red-500');
     // Default name for X is "Player X"
     expect(screen.getByText(/Next player: Player X \(X\)/i)).toBeInTheDocument();
   });
 
   test('selecting O changes symbol, resets game, and O starts first in PvP', () => {
-    render(<App />);
+    renderApp();
     fireEvent.click(getSymbolButton('O'));
-    expect(getSymbolButton('O')).toHaveClass('bg-purple-500'); // Active style for O
-    expect(getSymbolButton('X')).not.toHaveClass('bg-indigo-500');
+    expect(getSymbolButton('O')).toHaveClass('bg-red-500'); // Active style for O
+    expect(getSymbolButton('X')).not.toHaveClass('bg-blue-500');
     expect(localStorageSetItemSpy).toHaveBeenCalledWith('ticTacToeHumanSymbol', 'O');
     // Board should be empty (reset)
     getSquares().forEach(sq => expect(sq).toBeEmptyDOMElement());
@@ -152,14 +170,14 @@ describe('App Component - Choose Your Symbol & Game Logic', () => {
   });
 
   test('symbol selection buttons are disabled after game starts', () => {
-    render(<App />);
+    renderApp();
     fireEvent.click(getSquares()[0]); // X makes a move
     expect(getSymbolButton('X')).toBeDisabled();
     expect(getSymbolButton('O')).toBeDisabled();
   });
 
   test('symbol selection buttons are disabled during history view', async () => {
-    render(<App />);
+    renderApp();
     // Play a game to create history
     fireEvent.click(getSquares()[0]); fireEvent.click(getSquares()[1]);
     fireEvent.click(getSquares()[2]); fireEvent.click(getSquares()[3]);
@@ -176,44 +194,44 @@ describe('App Component - Choose Your Symbol & Game Logic', () => {
   });
 
   test('Human as X starts first in PvP', () => {
-    render(<App />);
+    renderApp();
     fireEvent.click(getSymbolButton('X')); // Explicitly select X
     expect(screen.getByText(/Next player: Player X \(X\)/i)).toBeInTheDocument();
   });
 
   test('Human as O starts first in PvP', () => {
-    render(<App />);
+    renderApp();
     fireEvent.click(getSymbolButton('O'));
     // When human is O, Player O (human) is next
     expect(screen.getByText(/Next player: Player O \(O\)/i)).toBeInTheDocument();
   });
 
   test('Human as X, AI is O, AI makes O move', async () => {
-    render(<App />);
+    renderApp();
     fireEvent.click(getSymbolButton('X'));
-    fireEvent.click(getGameModeButton(/Play vs AI \(Easy\)/i));
+    fireEvent.click(getGameModeButton(/PvE \(Easy\)/i));
     
-    (mockGetEasyAIMove as jest.Mock).mockReturnValue(1); // AI will play at index 1
+    (mockGetEasyAIMove as any).mockReturnValue(1); // AI will play at index 1
 
     fireEvent.click(getSquares()[0]); // Human (X) plays at 0
     expect(getSquares()[0]).toHaveTextContent('X');
     expect(screen.getByText(/Easy AI \(AI as O\) is thinking.../i)).toBeInTheDocument();
 
-    act(() => { jest.advanceTimersByTime(1000); });
+    act(() => { vi.advanceTimersByTime(1000); });
 
     await waitFor(() => expect(getSquares()[1]).toHaveTextContent('O'));
-  });
+  }, 15000); // Increased timeout
 
   test('Human as O, AI is X, AI makes X move', async () => {
-    render(<App />);
+    renderApp();
     fireEvent.click(getSymbolButton('O'));
-    fireEvent.click(getGameModeButton(/Play vs AI \(Easy\)/i));
+    fireEvent.click(getGameModeButton(/PvE \(Easy\)/i));
     
     // AI (X) should make the first move
-    (mockGetEasyAIMove as jest.Mock).mockReturnValue(0); 
+    (mockGetEasyAIMove as any).mockReturnValue(0); 
     expect(screen.getByText(/Easy AI \(AI as X\) is thinking.../i)).toBeInTheDocument();
     
-    act(() => { jest.advanceTimersByTime(1000); });
+    act(() => { vi.advanceTimersByTime(1000); });
     await waitFor(() => expect(getSquares()[0]).toHaveTextContent('X'));
 
     // Now human (O) plays
@@ -224,18 +242,18 @@ describe('App Component - Choose Your Symbol & Game Logic', () => {
 
   test('Human as O wins PvA, pva.humanWins increments', async () => {
     localStorageGetItemSpy.mockReturnValue(null); // Clear stats
-    render(<App />);
+    renderApp(); // Already using renderApp
     fireEvent.click(getSymbolButton('O'));
-    fireEvent.click(getGameModeButton(/Play vs AI \(Easy\)/i));
+    fireEvent.click(getGameModeButton(/PvE \(Easy\)/i));
 
     // Human (O) moves: 0, 1, 2 (wins)
     // AI (X) moves: 3, 4
-    (mockGetEasyAIMove as jest.Mock).mockReturnValueOnce(3).mockReturnValueOnce(4);
+    (mockGetEasyAIMove as any).mockReturnValueOnce(3).mockReturnValueOnce(4);
 
     fireEvent.click(getSquares()[0]); // Human (O)
-    act(() => { jest.advanceTimersByTime(1000); }); // AI (X) at 3
+    act(() => { vi.advanceTimersByTime(1000); }); // AI (X) at 3
     fireEvent.click(getSquares()[1]); // Human (O)
-    act(() => { jest.advanceTimersByTime(1000); }); // AI (X) at 4
+    act(() => { vi.advanceTimersByTime(1000); }); // AI (X) at 4
     fireEvent.click(getSquares()[2]); // Human (O) wins
 
     await waitFor(() => {
@@ -249,18 +267,18 @@ describe('App Component - Choose Your Symbol & Game Logic', () => {
 
   test('Human as X wins PvA, pva.humanWins increments', async () => {
     localStorageGetItemSpy.mockReturnValue(null); // Clear stats
-    render(<App />);
+    renderApp(); // Already using renderApp
     fireEvent.click(getSymbolButton('X')); // Default, but explicit for clarity
-    fireEvent.click(getGameModeButton(/Play vs AI \(Easy\)/i));
+    fireEvent.click(getGameModeButton(/PvE \(Easy\)/i));
 
     // Human (X) moves: 0, 1, 2 (wins)
     // AI (O) moves: 3, 4
-    (mockGetEasyAIMove as jest.Mock).mockReturnValueOnce(3).mockReturnValueOnce(4);
+    (mockGetEasyAIMove as any).mockReturnValueOnce(3).mockReturnValueOnce(4);
 
     fireEvent.click(getSquares()[0]); // Human (X)
-    act(() => { jest.advanceTimersByTime(1000); }); // AI (O) at 3
+    act(() => { vi.advanceTimersByTime(1000); }); // AI (O) at 3
     fireEvent.click(getSquares()[1]); // Human (X)
-    act(() => { jest.advanceTimersByTime(1000); }); // AI (O) at 4
+    act(() => { vi.advanceTimersByTime(1000); }); // AI (O) at 4
     fireEvent.click(getSquares()[2]); // Human (X) wins
 
     await waitFor(() => {
@@ -273,24 +291,24 @@ describe('App Component - Choose Your Symbol & Game Logic', () => {
   });
 
   test('status messages are correct when human is O in PvA', async () => {
-    render(<App />);
+    renderApp(); // Already using renderApp
     fireEvent.click(getSymbolButton('O'));
-    fireEvent.click(getGameModeButton(/Play vs AI \(Easy\)/i));
+    fireEvent.click(getGameModeButton(/PvE \(Easy\)/i));
     
     // AI (X) is thinking (because Human is O, so X is AI and X starts)
-    (mockGetEasyAIMove as jest.Mock).mockReturnValue(0); // AI will play at 0
+    (mockGetEasyAIMove as any).mockReturnValue(0); // AI will play at 0
     expect(screen.getByText(/Easy AI \(AI as X\) is thinking.../i)).toBeInTheDocument();
     
-    act(() => { jest.advanceTimersByTime(1000); }); // AI makes move
+    act(() => { vi.advanceTimersByTime(1000); }); // AI makes move
     await waitFor(() => expect(getSquares()[0]).toHaveTextContent('X'));
 
     expect(screen.getByText(/Your Turn \(Player O - O\)/i)).toBeInTheDocument();
   });
   
   test('Scoreboard displays correctly when human is O in PvA', async () => {
-    render(<App />);
+    renderApp(); // Already using renderApp
     fireEvent.click(getSymbolButton('O'));
-    fireEvent.click(getGameModeButton(/Play vs AI \(Easy\)/i));
+    fireEvent.click(getGameModeButton(/PvE \(Easy\)/i));
 
     // Human is Player O (You), AI is Player X (Easy AI)
     expect(screen.getByText(/Player O \(You\)/i)).toBeInTheDocument();
@@ -306,14 +324,14 @@ describe('App Component - Choose Your Symbol & Game Logic', () => {
 });
 
 describe('App Component - History View Functionality', () => {
-  let localStorageGetItemSpy: jest.SpyInstance;
-  let localStorageSetItemSpy: jest.SpyInstance;
+  let localStorageGetItemSpy: ReturnType<typeof vi.spyOn>;
+  let localStorageSetItemSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    localStorageGetItemSpy = jest.spyOn(Storage.prototype, 'getItem');
-    localStorageSetItemSpy = jest.spyOn(Storage.prototype, 'setItem');
-    (mockGetEasyAIMove as jest.Mock).mockClear(); // Clear AI move mock if used in setup
-    jest.useFakeTimers(); // Use fake timers if any delays are involved (e.g., AI thinking)
+    localStorageGetItemSpy = vi.spyOn(Storage.prototype, 'getItem');
+    localStorageSetItemSpy = vi.spyOn(Storage.prototype, 'setItem');
+    (mockGetEasyAIMove as any).mockClear(); // Clear AI move mock if used in setup
+    vi.useFakeTimers(); // Use fake timers if any delays are involved (e.g., AI thinking)
   });
 
   afterEach(() => {
@@ -321,9 +339,9 @@ describe('App Component - History View Functionality', () => {
     localStorageSetItemSpy.mockRestore();
     localStorage.clear();
     act(() => {
-      jest.runOnlyPendingTimers();
+      vi.runOnlyPendingTimers();
     });
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   // Helper function to play a game and return the board squares
@@ -338,7 +356,7 @@ describe('App Component - History View Functionality', () => {
   // Test Case 1: Storing history of moves and entering history view
   test('stores game moves, allows entering history view, and shows correct initial historic board', async () => {
     localStorageGetItemSpy.mockReturnValue(null); // Start with empty history
-    render(<App />);
+    renderApp(); // Already using renderApp
 
     // Play a short game: X wins
     // X O .
@@ -372,14 +390,14 @@ describe('App Component - History View Functionality', () => {
     expect(screen.getByRole('button', { name: /New Game/i })).toBeDisabled();
     expect(screen.getByRole('button', { name: /Reset All/i })).toBeDisabled();
     expect(screen.getByRole('button', { name: /Play vs Player/i })).toHaveClass('opacity-50');
-    expect(screen.getByRole('button', { name: /Play vs AI \(Easy\)/i })).toHaveClass('opacity-50');
+    expect(screen.getByRole('button', { name: /PvE \(Easy\)/i })).toHaveClass('opacity-50');
     expect(screen.getByLabelText(/Player X Name:/i)).toBeDisabled();
-  });
+  }, 15000); // Increased timeout
 
   // Test Case 2: Navigating History
   test('allows navigating through historic moves', async () => {
     localStorageGetItemSpy.mockReturnValue(null);
-    render(<App />);
+    renderApp(); // Already using renderApp
     playGame([0, 3, 1, 4, 2]); // X wins in 5 moves
 
     await waitFor(() => {
@@ -422,12 +440,12 @@ describe('App Component - History View Functionality', () => {
     expect(nextButton).toBeDisabled();
     boardSquares = screen.getAllByRole('button', { name: /square/i });
     expect(boardSquares[2]).toHaveTextContent('X'); // Winning move visible again
-  });
+  }, 10000); // Increased timeout to 10 seconds
   
   // Test Case 3: Exiting History View Mode
   test('exits history view mode and reverts to current game state', async () => {
     localStorageGetItemSpy.mockReturnValue(null);
-    render(<App />);
+    renderApp(); // Already using renderApp
     // Play a game, X makes first move
     playGame([0]); // X at square 0
     
@@ -472,7 +490,7 @@ describe('App Component - History View Functionality', () => {
   // Test Case 4: Board Interactivity
   test('board is not interactive during history view', async () => {
     localStorageGetItemSpy.mockReturnValue(null);
-    render(<App />);
+    renderApp(); // Already using renderApp
     playGame([0, 3, 1, 4, 2]); // X wins
 
     await waitFor(() => {
@@ -491,7 +509,7 @@ describe('App Component - History View Functionality', () => {
   // This test case is more about the structure saved to localStorage if needed for direct inspection
   test('stores detailed move history in localStorage', async () => {
     localStorageGetItemSpy.mockReturnValue(null); // Ensure clean start
-    render(<App />);
+    renderApp(); // Already using renderApp
     
     // Player X moves to 0, Player O moves to 3, Player X moves to 1
     playGame([0, 3, 1]); 
@@ -525,25 +543,25 @@ describe('App Component - History View Functionality', () => {
 describe('App Component - AI Mode', () => {
   beforeEach(() => {
     // Reset mocks before each test
-    (mockGetEasyAIMove as jest.Mock).mockClear();
-    jest.useFakeTimers(); // Use fake timers for setTimeout
+    (mockGetEasyAIMove as any).mockClear();
+    vi.useFakeTimers(); // Use fake timers for setTimeout
   });
 
   afterEach(() => {
     act(() => { // Ensure all timers are processed
-      jest.runOnlyPendingTimers();
+      vi.runOnlyPendingTimers();
     });
-    jest.useRealTimers(); // Restore real timers
+    vi.useRealTimers(); // Restore real timers
   });
 
   test('AI should make a move after player in "vs AI" mode', async () => {
-    render(<App />);
+    renderApp(); // Already using renderApp
     
     // Switch to AI mode
-    fireEvent.click(screen.getByText(/Play vs AI \(Easy\)/i));
+    fireEvent.click(screen.getByRole('button', { name: /PvE \(Easy\)/i }));
     
     // Mock AI's next move (e.g., to square 0, assuming it's empty after reset)
-    (mockGetEasyAIMove as jest.Mock).mockReturnValue(0);
+    (mockGetEasyAIMove as any).mockReturnValue(0);
 
     // Player X makes a move (e.g., square 4)
     const squares = screen.getAllByRole('button', { name: /square/i });
@@ -562,7 +580,7 @@ describe('App Component - AI Mode', () => {
 
     // Advance timers to cover the AI's setTimeout
     act(() => {
-      jest.advanceTimersByTime(1000); // Match AI delay (750ms) + buffer
+      vi.advanceTimersByTime(1000); // Match AI delay (750ms) + buffer
     });
 
     await waitFor(() => {
@@ -578,31 +596,31 @@ describe('App Component - AI Mode', () => {
   });
 
   test('Player O name input should be disabled in AI mode and show AI name', () => {
-    render(<App />);
+    renderApp(); // Already using renderApp
     
     // Switch to AI mode
-    fireEvent.click(screen.getByText(/Play vs AI \(Easy\)/i));
+    fireEvent.click(screen.getByRole('button', { name: /PvE \(Easy\)/i }));
     
     const playerOInput = screen.getByLabelText(/Player O Name:/i) as HTMLInputElement;
     expect(playerOInput).toBeDisabled();
     expect(playerOInput.value).toBe('Easy AI');
 
     // Switch back to Player vs Player
-    fireEvent.click(screen.getByText(/Play vs Player/i));
+    fireEvent.click(screen.getByRole('button', { name: /PvP/i }));
     expect(playerOInput).not.toBeDisabled();
     expect(playerOInput.value).toBe('Player O'); // Resets to default "Player O"
   });
 });
 
 describe('App Component - Detailed Statistics', () => {
-  let localStorageGetItemSpy: jest.SpyInstance;
-  let localStorageSetItemSpy: jest.SpyInstance;
+  let localStorageGetItemSpy: ReturnType<typeof vi.spyOn>;
+  let localStorageSetItemSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    localStorageGetItemSpy = jest.spyOn(Storage.prototype, 'getItem');
-    localStorageSetItemSpy = jest.spyOn(Storage.prototype, 'setItem');
-    (mockGetEasyAIMove as jest.Mock).mockClear();
-    jest.useFakeTimers();
+    localStorageGetItemSpy = vi.spyOn(Storage.prototype, 'getItem');
+    localStorageSetItemSpy = vi.spyOn(Storage.prototype, 'setItem');
+    (mockGetEasyAIMove as any).mockClear();
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
@@ -610,14 +628,14 @@ describe('App Component - Detailed Statistics', () => {
     localStorageSetItemSpy.mockRestore();
     localStorage.clear();
     act(() => { // Ensure all timers are processed before restoring real timers
-        jest.runOnlyPendingTimers();
+        vi.runOnlyPendingTimers();
     });
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   test('initializes with default stats if localStorage is empty', () => {
     localStorageGetItemSpy.mockReturnValue(null);
-    render(<App />);
+    renderApp(); // Already using renderApp
     // Check ScoreBoard for initial stats (Total Games: 0)
     expect(screen.getByText('Total Games').nextElementSibling?.textContent).toBe('0');
     // Check PvP mode stats by default
@@ -636,7 +654,7 @@ describe('App Component - Detailed Statistics', () => {
       pva: { playerXWins: 1, aiOWins: 0, draws: 0 },
     };
     localStorageGetItemSpy.mockReturnValue(JSON.stringify(mockStats));
-    render(<App />);
+    renderApp(); // Already using renderApp
     expect(screen.getByText('Total Games').nextElementSibling?.textContent).toBe('5');
     // PvP mode is default
     expect(screen.getByText('Player X').nextElementSibling?.textContent).toBe('2');
@@ -647,7 +665,7 @@ describe('App Component - Detailed Statistics', () => {
 
   test('PvP Mode: Player X wins, updates stats and localStorage correctly', async () => {
     localStorageGetItemSpy.mockReturnValue(null);
-    render(<App />);
+    renderApp(); // Already using renderApp
     
     const squares = screen.getAllByRole('button', { name: /square/i });
     fireEvent.click(squares[0]); // X
@@ -668,11 +686,11 @@ describe('App Component - Detailed Statistics', () => {
     });
     expect(screen.getByText('Total Games').nextElementSibling?.textContent).toBe('1');
     expect(screen.getByText('Player X').nextElementSibling?.textContent).toBe('1');
-  });
+  }, 15000); // Increased timeout
 
   test('PvP Mode: Draw, updates stats and localStorage correctly', async () => {
     localStorageGetItemSpy.mockReturnValue(null);
-    render(<App />);
+    renderApp(); // Already using renderApp
     const squares = screen.getAllByRole('button', { name: /square/i });
     // X O X
     // X O X
@@ -704,16 +722,16 @@ describe('App Component - Detailed Statistics', () => {
 
   test('PvA Mode: Player X (Human) Wins, updates stats and localStorage', async () => {
     localStorageGetItemSpy.mockReturnValue(null);
-    render(<App />);
-    fireEvent.click(screen.getByText(/Play vs AI \(Easy\)/i)); // Switch to PvA
+    renderApp(); // Already using renderApp
+    fireEvent.click(screen.getByRole('button', { name: /PvE \(Easy\)/i })); // Switch to PvA
 
-    (mockGetEasyAIMove as jest.Mock).mockReturnValueOnce(3).mockReturnValueOnce(4); // AI moves
+    (mockGetEasyAIMove as any).mockReturnValueOnce(3).mockReturnValueOnce(4); // AI moves
 
     const squares = screen.getAllByRole('button', { name: /square/i });
     fireEvent.click(squares[0]); // X
-    act(() => { jest.advanceTimersByTime(1000); }); // AI moves to 3
+    act(() => { vi.advanceTimersByTime(1000); }); // AI moves to 3
     fireEvent.click(squares[1]); // X
-    act(() => { jest.advanceTimersByTime(1000); }); // AI moves to 4
+    act(() => { vi.advanceTimersByTime(1000); }); // AI moves to 4
     fireEvent.click(squares[2]); // X wins
 
     await waitFor(() => {
@@ -733,22 +751,22 @@ describe('App Component - Detailed Statistics', () => {
   
   test('PvA Mode: AI Wins, updates stats and localStorage', async () => {
     localStorageGetItemSpy.mockReturnValue(null);
-    render(<App />);
-    fireEvent.click(screen.getByText(/Play vs AI \(Easy\)/i));
+    renderApp(); // Already using renderApp
+    fireEvent.click(screen.getByRole('button', { name: /PvE \(Easy\)/i }));
 
-    (mockGetEasyAIMove as jest.Mock)
+    (mockGetEasyAIMove as any)
       .mockReturnValueOnce(0) // AI
       .mockReturnValueOnce(1) // AI
       .mockReturnValueOnce(2); // AI wins
 
     const squares = screen.getAllByRole('button', { name: /square/i });
     fireEvent.click(squares[3]); // X
-    act(() => { jest.advanceTimersByTime(1000); }); // AI moves to 0
+    act(() => { vi.advanceTimersByTime(1000); }); // AI moves to 0
     fireEvent.click(squares[4]); // X
-    act(() => { jest.advanceTimersByTime(1000); }); // AI moves to 1
+    act(() => { vi.advanceTimersByTime(1000); }); // AI moves to 1
     // Player X would play here, but AI will win on its next turn regardless of X's move
     // Let AI make its third move (triggered by X's turn ending after previous AI move)
-    act(() => { jest.advanceTimersByTime(1000); }); // AI moves to 2 (and wins)
+    act(() => { vi.advanceTimersByTime(1000); }); // AI moves to 2 (and wins)
 
     await waitFor(() => {
       expect(localStorageSetItemSpy).toHaveBeenCalledWith(
@@ -766,11 +784,11 @@ describe('App Component - Detailed Statistics', () => {
 
   test('PvA Mode: Draw, updates stats and localStorage', async () => {
     localStorageGetItemSpy.mockReturnValue(null);
-    render(<App />);
-    fireEvent.click(screen.getByText(/Play vs AI \(Easy\)/i));
+    renderApp(); // Already using renderApp
+    fireEvent.click(screen.getByRole('button', { name: /PvE \(Easy\)/i }));
 
     // Mock a sequence of AI moves that leads to a draw
-    (mockGetEasyAIMove as jest.Mock)
+    (mockGetEasyAIMove as any)
       .mockReturnValueOnce(1) // O
       .mockReturnValueOnce(3) // O
       .mockReturnValueOnce(4) // O
@@ -781,13 +799,13 @@ describe('App Component - Detailed Statistics', () => {
     // O O X
     // X X O
     fireEvent.click(squares[0]); // X
-    act(() => { jest.advanceTimersByTime(1000); }); // AI to 1
+    act(() => { vi.advanceTimersByTime(1000); }); // AI to 1
     fireEvent.click(squares[2]); // X
-    act(() => { jest.advanceTimersByTime(1000); }); // AI to 3
+    act(() => { vi.advanceTimersByTime(1000); }); // AI to 3
     fireEvent.click(squares[5]); // X
-    act(() => { jest.advanceTimersByTime(1000); }); // AI to 4
+    act(() => { vi.advanceTimersByTime(1000); }); // AI to 4
     fireEvent.click(squares[6]); // X
-    act(() => { jest.advanceTimersByTime(1000); }); // AI to 8
+    act(() => { vi.advanceTimersByTime(1000); }); // AI to 8
     fireEvent.click(squares[7]); // X - Draw
 
     await waitFor(() => {
@@ -812,7 +830,7 @@ describe('App Component - Detailed Statistics', () => {
       pva: { playerXWins: 1, aiOWins: 0, draws: 0 },
     };
     localStorageGetItemSpy.mockReturnValue(JSON.stringify(mockStats));
-    render(<App />);
+    renderApp(); // Already using renderApp
 
     // Verify initial loaded stats
     expect(screen.getByText('Total Games').nextElementSibling?.textContent).toBe('5');

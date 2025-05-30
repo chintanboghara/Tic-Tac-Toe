@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import { vi } from 'vitest';
 import { ThemeProvider, useTheme } from '../ThemeContext'; // Adjust path as per your project structure
 
 // Test component to consume the theme context
@@ -46,7 +47,7 @@ describe('ThemeProvider and useTheme Hook', () => {
   test('useTheme throws an error if used outside of a ThemeProvider', () => {
     // Suppress console.error output for this specific test
     const originalConsoleError = console.error;
-    console.error = jest.fn();
+    console.error = vi.fn();
 
     // Expect render to throw the specific error
     expect(() => {
