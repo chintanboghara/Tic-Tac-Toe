@@ -15,16 +15,18 @@ const TestSoundConsumer = () => {
   );
 };
 
+import { vi } from 'vitest';
+
 describe('SoundProvider and useSounds', () => {
-  let consoleLogSpy: jest.SpyInstance;
-  let localStorageGetItemSpy: jest.SpyInstance;
-  let localStorageSetItemSpy: jest.SpyInstance;
+  let consoleLogSpy: ReturnType<typeof vi.spyOn>;
+  let localStorageGetItemSpy: ReturnType<typeof vi.spyOn>;
+  let localStorageSetItemSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     // Mock localStorage
-    localStorageGetItemSpy = jest.spyOn(Storage.prototype, 'getItem');
-    localStorageSetItemSpy = jest.spyOn(Storage.prototype, 'setItem');
+    localStorageGetItemSpy = vi.spyOn(Storage.prototype, 'getItem');
+    localStorageSetItemSpy = vi.spyOn(Storage.prototype, 'setItem');
   });
 
   afterEach(() => {
@@ -105,7 +107,7 @@ describe('SoundProvider and useSounds', () => {
   
   test('useSounds should throw error when not used within SoundProvider', () => {
     // Suppress console.error for this specific test, as React will log the error boundary
-    const consoleErrorMock = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const consoleErrorMock = vi.spyOn(console, 'error').mockImplementation(() => {});
     
     expect(() => render(<TestSoundConsumer />)).toThrow('useSounds must be used within a SoundProvider');
     

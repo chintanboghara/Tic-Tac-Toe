@@ -5,11 +5,13 @@ import { ThemeProvider, useTheme } from '../../contexts/ThemeContext'; // Adjust
 import ThemeSwitcher from '../ThemeSwitcher'; // Adjust path
 import { Sun, Moon } from 'lucide-react'; // To help identify icons if needed
 
+import { vi } from 'vitest';
+
 // Mock Lucide icons for easier testing if direct icon comparison is complex
 // This approach checks for the presence of the icon component name.
 // If you need to check specific SVG paths, a different mocking strategy would be needed.
-jest.mock('lucide-react', () => {
-  const originalModule = jest.requireActual('lucide-react');
+vi.mock('lucide-react', async (importOriginal) => {
+  const originalModule = await importOriginal() as any; // Cast to any or define a more specific type
   return {
     ...originalModule,
     Moon: () => <svg data-testid="moon-icon" />,

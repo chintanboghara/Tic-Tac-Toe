@@ -1,6 +1,7 @@
 import React from 'react';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, within, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import { vi } from 'vitest';
 import GameHistory from '../GameHistory'; // Adjust path as necessary
 import { GameHistoryProps } from '../GameHistory'; // Assuming you export this type
 
@@ -10,13 +11,13 @@ describe('GameHistory Component', () => {
 
   beforeEach(() => {
     // Replace the actual formatDate with the mock for consistent testing
-    jest.spyOn(Intl, 'DateTimeFormat').mockImplementation(() => ({
+    vi.spyOn(Intl, 'DateTimeFormat').mockImplementation(() => ({
       format: (date: Date | undefined) => mockFormatDate(date as Date),
     } as any));
   });
 
   afterEach(() => {
-    jest.restoreAllMocks(); // Restore original Intl.DateTimeFormat after each test
+    vi.restoreAllMocks(); // Restore original Intl.DateTimeFormat after each test
   });
   
   // Test Case 1: Empty History
@@ -36,59 +37,59 @@ describe('GameHistory Component', () => {
     const mockDate = new Date();
     const historyData: GameHistoryProps['history'] = [
       {
+        id: 'game1',
         winner: 'X',
-        board: ['X', 'O', 'X', 'O', 'X', null, 'O', null, 'X'],
+        moves: [{ player: 'X', board: ['X', 'O', 'X', 'O', 'X', null, 'O', null, 'X'] }],
         date: mockDate,
       },
       {
+        id: 'game2',
         winner: null, // Draw
-        board: ['X', 'O', 'X', 'O', 'X', 'O', 'O', 'X', 'O'],
+        moves: [{ player: 'O', board: ['X', 'O', 'X', 'O', 'X', 'O', 'O', 'X', 'O'] }],
         date: new Date(mockDate.getTime() + 1000), // Different time
       },
     ];
 
     render(<GameHistory history={historyData} />);
 
-    const gameEntries = screen.getAllByRole('listitem'); // Assuming each game entry is a list item or has a distinct role/test-id
+    const gameEntries = screen.getAllByRole('button', { name: /View details for game played on/i });
     expect(gameEntries.length).toBe(historyData.length);
 
     // --- Check first game entry (X won) ---
-    // Note: History is displayed in reverse, so historyData[0] is the last one in the list visually, but first in the array.
-    // The component reverses it, so we check based on the original order.
-    const firstGameEntry = gameEntries[0]; // This corresponds to historyData[1] (the draw game) due to reverse mapping in component
-    const secondGameEntry = gameEntries[1]; // This corresponds to historyData[0] (X won)
+    // Note: App.tsx pre-sorts history, so historyData[0] is the newest and appears first.
+    const gameWonEntry = gameEntries[0]; // Corresponds to historyData[0] (X won)
+    const drawGameEntry = gameEntries[1]; // Corresponds to historyData[1] (Draw)
 
-    // Check X Won game (second in UI, first in data array)
-    expect(within(secondGameEntry).getByText(/Player X won/i)).toBeInTheDocument();
-    expect(within(secondGameEntry).getByText(mockFormatDate(historyData[0].date))).toBeInTheDocument();
+    // Check X Won game (first in UI, first in data array)
+    expect(within(gameWonEntry).getByText(/Player X won/i)).toBeInTheDocument();
+    expect(within(gameWonEntry).getByText(mockFormatDate(historyData[0].date))).toBeInTheDocument();
     
-    const miniBoardX = within(secondGameEntry).getByRole('grid'); // Assuming mini-board is a grid
+    const miniBoardX = within(gameWonEntry).getByTestId('mini-board-display');
     expect(miniBoardX).toBeInTheDocument();
     
     // Check content of X's winning mini-board
     const xSquaresX = within(miniBoardX).getAllByText('X');
     const oSquaresX = within(miniBoardX).getAllByText('O');
-    // historyData[0].board = ['X', 'O', 'X', 'O', 'X', null, 'O', null, 'X'] -> 5 'X', 2 'O'
+    // historyData[0].moves[0].board = ['X', 'O', 'X', 'O', 'X', null, 'O', null, 'X'] -> 5 'X', 2 'O'
     expect(xSquaresX.length).toBe(5);
     expect(oSquaresX.length).toBe(2);
-    const emptySquaresX = within(miniBoardX).queryAllByText(''); // Empty cells might not have text
     // To count empty squares, we can check the number of children vs X and O
     const totalCellsX = within(miniBoardX).getAllByRole('gridcell'); // Assuming cells have role gridcell or similar
     expect(totalCellsX.length).toBe(9);
     expect(totalCellsX.length - xSquaresX.length - oSquaresX.length).toBe(2); // 2 empty squares
 
     // --- Check second game entry (Draw) ---
-    // (first in UI, second in data array)
-    expect(within(firstGameEntry).getByText(/Draw/i)).toBeInTheDocument();
-    expect(within(firstGameEntry).getByText(mockFormatDate(historyData[1].date))).toBeInTheDocument();
+    // (second in UI, second in data array)
+    expect(within(drawGameEntry).getByText(/Draw/i)).toBeInTheDocument();
+    expect(within(drawGameEntry).getByText(mockFormatDate(historyData[1].date))).toBeInTheDocument();
 
-    const miniBoardDraw = within(firstGameEntry).getByRole('grid');
+    const miniBoardDraw = within(drawGameEntry).getByTestId('mini-board-display');
     expect(miniBoardDraw).toBeInTheDocument();
 
     // Check content of Draw mini-board
     const xSquaresDraw = within(miniBoardDraw).getAllByText('X');
     const oSquaresDraw = within(miniBoardDraw).getAllByText('O');
-    // historyData[1].board = ['X', 'O', 'X', 'O', 'X', 'O', 'O', 'X', 'O'] -> 5 'X', 4 'O'
+    // historyData[1].moves[0].board = ['X', 'O', 'X', 'O', 'X', 'O', 'O', 'X', 'O'] -> 5 'X', 4 'O'
     expect(xSquaresDraw.length).toBe(5);
     expect(oSquaresDraw.length).toBe(4);
     const totalCellsDraw = within(miniBoardDraw).getAllByRole('gridcell');
@@ -100,15 +101,16 @@ describe('GameHistory Component', () => {
   test('mini-board cells have correct styling for X, O, and empty', () => {
     const historyData: GameHistoryProps['history'] = [
       {
+        id: 'game3',
         winner: 'X',
-        board: ['X', 'O', null, null, 'X', null, null, null, 'O'],
+        moves: [{ player: 'X', board: ['X', 'O', null, null, 'X', null, null, null, 'O'] }],
         date: new Date(),
       },
     ];
     render(<GameHistory history={historyData} />);
     
-    const gameEntry = screen.getByRole('listitem'); // Assuming one entry
-    const miniBoard = within(gameEntry).getByRole('grid');
+    const gameEntry = screen.getByRole('button', { name: /View details for game played on/i }); // Assuming one entry
+    const miniBoard = within(gameEntry).getByTestId('mini-board-display');
     const cells = within(miniBoard).getAllByRole('gridcell');
 
     // Check classes for X, O, and empty based on the component's styling logic
@@ -128,7 +130,7 @@ describe('GameHistory Component', () => {
 
   // Test Case 4: onViewHistoricGame callback
   test('calls onViewHistoricGame with the correct game when a history item is clicked', () => {
-    const mockOnViewHistoricGame = jest.fn();
+    const mockOnViewHistoricGame = vi.fn();
     const mockDate1 = new Date();
     const mockDate2 = new Date(mockDate1.getTime() + 1000);
 

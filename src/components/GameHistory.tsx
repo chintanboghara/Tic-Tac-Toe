@@ -62,7 +62,10 @@ const GameHistory: React.FC<GameHistoryProps> = ({ history, onViewHistoricGame }
                   </span>
                 </div>
                 {/* Mini-board display */}
-                <div className="mt-2 grid grid-cols-3 gap-0.5 w-16 h-16 border border-gray-300 dark:border-slate-600 bg-gray-100 dark:bg-slate-700 p-0.5 rounded">
+                <div 
+                  className="mt-2 grid grid-cols-3 gap-0.5 w-16 h-16 border border-gray-300 dark:border-slate-600 bg-gray-100 dark:bg-slate-700 p-0.5 rounded"
+                  data-testid="mini-board-display"
+                >
                   {finalBoardState.map((square, i) => (
                     <div
                       key={i}
@@ -71,7 +74,7 @@ const GameHistory: React.FC<GameHistoryProps> = ({ history, onViewHistoricGame }
                                     square === 'O' ? 'text-purple-500 bg-purple-100 dark:text-purple-400 dark:bg-purple-800' :
                                     'bg-gray-200 dark:bg-slate-600'}`}
                     >
-                      {square}
+                      {square || ''}
                     </div>
                   ))}
                 </div>
