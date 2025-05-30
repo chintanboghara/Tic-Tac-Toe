@@ -23,7 +23,7 @@ const Board: React.FC<BoardProps> = ({ board: squares, winningLine, onSquareClic
   }
 
   return (
-    <div className={`grid grid-cols-3 gap-1 w-64 h-64 mx-auto rounded-lg shadow-inner p-1 bg-gray-200 dark:bg-gray-700`}>
+    <div className={`grid grid-cols-3 gap-1 w-full aspect-square max-w-sm mx-auto rounded-lg shadow-inner p-1 bg-gray-200 dark:bg-gray-700`}>
       {squares.map((squareValue, i) => {
         // If squares was undefined, .map() would have thrown "Cannot read properties of undefined (reading 'map')"
         // So, if we are here, squares is an array.

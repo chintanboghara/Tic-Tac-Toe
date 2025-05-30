@@ -63,7 +63,7 @@ const GameHistory: React.FC<GameHistoryProps> = ({ history, onViewHistoricGame }
                 </div>
                 {/* Mini-board display */}
                 <div 
-                  className="mt-2 grid grid-cols-3 gap-0.5 w-16 h-16 border border-gray-300 dark:border-slate-600 bg-gray-100 dark:bg-slate-700 p-0.5 rounded"
+                  className="mt-2 grid grid-cols-3 gap-0.5 w-14 h-14 sm:w-16 sm:h-16 border border-gray-300 dark:border-slate-600 bg-gray-100 dark:bg-slate-700 p-0.5 rounded"
                   data-testid="mini-board-display"
                 >
                   {finalBoardState.map((square, i) => (
