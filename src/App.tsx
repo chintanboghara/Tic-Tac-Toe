@@ -7,7 +7,7 @@ import Board from './components/Board';
 import ScoreBoard from './components/ScoreBoard';
 import { GameStats, HistoricGame, BoardMove, PlayerSymbol } from './types';
 import GameHistory from './components/GameHistory';
-import { calculateWinner, checkDraw, getEasyAIMove } from './utils/gameLogic';
+import { calculateWinner, checkDraw, getEasyAIMove, getMediumAIMove } from './utils/gameLogic';
 
 const initialGameStats: GameStats = {
   totalGamesPlayed: 0,
@@ -26,7 +26,7 @@ function App() {
   });
   const [playerXName, setPlayerXName] = useState("Player X");
   const [playerOName, setPlayerOName] = useState("Player O");
-  const [gameMode, setGameMode] = useState<'twoPlayer' | 'vsAI'>('twoPlayer');
+  const [gameMode, setGameMode] = useState<'twoPlayer' | 'vsEasyAI' | 'vsMediumAI'>('twoPlayer');
   const [gameHistory, setGameHistory] = useState<HistoricGame[]>(() => {
     const storedHistory = localStorage.getItem('ticTacToeGameHistory');
     try {
@@ -63,7 +63,7 @@ function App() {
     const result = calculateWinner(board);
     if (gameStatus === 'playing' && (result || checkDraw(board))) {
       const gameIsWon = !!result;
-      const winner = result ? result.winner : null;
+      const winner = result ? (result.winner as PlayerSymbol | null) : null;
 
       if (gameIsWon) {
         setGameStatus('won');
@@ -94,7 +94,7 @@ function App() {
           } else { // Draw
              newStats.pvp = { ...prevStats.pvp, draws: prevStats.pvp.draws + 1 };
           }
-        } else { // gameMode === 'vsAI'
+        } else { // gameMode === 'vsEasyAI' || gameMode === 'vsMediumAI'
           if (winner === humanPlayerSymbol) {
             newStats.pva = { ...prevStats.pva, playerXWins: prevStats.pva.playerXWins + 1 };
           } else if (winner) { // AI won
@@ -129,7 +129,7 @@ function App() {
   }, [board, playSound, gameMode, currentMoves, gameStatus, humanPlayerSymbol]);
 
   const handleClick = useCallback((index: number) => {
-    if (board[index] || gameStatus !== 'playing' || (gameMode === 'vsAI' && (xIsNext && humanPlayerSymbol === 'O') || (!xIsNext && humanPlayerSymbol === 'X'))) return;
+    if (board[index] || gameStatus !== 'playing' || ((gameMode === 'vsEasyAI' || gameMode === 'vsMediumAI') && (xIsNext && humanPlayerSymbol === 'O') || (!xIsNext && humanPlayerSymbol === 'X'))) return;
 
     const newBoard = [...board];
     const currentPlayer = xIsNext ? 'X' : 'O';
@@ -143,15 +143,22 @@ function App() {
   }, [board, xIsNext, gameStatus, playSound, gameMode, humanPlayerSymbol]);
 
   useEffect(() => {
-    if (gameMode === 'vsAI' && gameStatus === 'playing') {
+    if ((gameMode === 'vsEasyAI' || gameMode === 'vsMediumAI') && gameStatus === 'playing') {
       const isAiTurnX = xIsNext && humanPlayerSymbol === 'O';
       const isAiTurnO = !xIsNext && humanPlayerSymbol === 'X';
       if (isAiTurnX || isAiTurnO) {
-        const aiMove = getEasyAIMove(board);
+        const aiSymbol = humanPlayerSymbol === 'X' ? 'O' : 'X';
+        let aiMove: number | null = null;
+        if (gameMode === 'vsEasyAI') {
+          aiMove = getEasyAIMove(board);
+        } else { // vsMediumAI
+          aiMove = getMediumAIMove(board, aiSymbol);
+        }
+        
         if (aiMove !== null) {
           const timer = setTimeout(() => {
             handleClick(aiMove);
-          }, 750);
+          }, 750); // Keep AI thinking delay consistent
           return () => clearTimeout(timer);
         }
       }
@@ -160,7 +167,7 @@ function App() {
 
   const resetGame = useCallback((isSwitchingMode = false) => {
     setBoard(Array(9).fill(null));
-    if (gameMode === 'vsAI' && humanPlayerSymbol === 'O' && isSwitchingMode) {
+    if ((gameMode === 'vsEasyAI' || gameMode === 'vsMediumAI') && humanPlayerSymbol === 'O' && isSwitchingMode) {
         setXIsNext(true); 
     } else {
         setXIsNext(true); 
@@ -213,13 +220,17 @@ function App() {
     resetGame(true); 
   };
   
-  const handleGameModeChange = (mode: 'twoPlayer' | 'vsAI') => {
+  type GameModeType = 'twoPlayer' | 'vsEasyAI' | 'vsMediumAI';
+
+  const handleGameModeChange = (mode: GameModeType) => {
     setGameMode(mode);
-    if (mode === 'vsAI') {
+    if (mode === 'vsEasyAI') {
       setPlayerOName("Easy AI");
-    } else {
-      if (playerOName === "Easy AI") { 
-          setPlayerOName("Player O");
+    } else if (mode === 'vsMediumAI') {
+      setPlayerOName("Medium AI");
+    } else { // twoPlayer
+      if (playerOName === "Easy AI" || playerOName === "Medium AI") {
+        setPlayerOName("Player O");
       }
     }
     resetGame(true); 
@@ -240,7 +251,7 @@ function App() {
 
     if (gameStatus === 'won') {
       const winnerSymbol = !xIsNext ? 'X' : 'O';
-      if (gameMode === 'vsAI') {
+      if (gameMode === 'vsEasyAI' || gameMode === 'vsMediumAI') {
         return winnerSymbol === humanPlayerSymbol ? `${playerXName} (You as ${humanPlayerSymbol}) win!` : `${playerOName} (AI as ${winnerSymbol}) wins!`;
       }
       const winnerName = winnerSymbol === 'X' ? playerXName : playerOName;
@@ -248,11 +259,12 @@ function App() {
     } else if (gameStatus === 'draw') {
       return "It's a draw!";
     } else {
-      if (gameMode === 'vsAI') {
+      if (gameMode === 'vsEasyAI' || gameMode === 'vsMediumAI') {
         const aiPlayerSymbol = humanPlayerSymbol === 'X' ? 'O' : 'X';
+        const aiPlayerName = gameMode === 'vsEasyAI' ? "Easy AI" : "Medium AI";
         return (xIsNext && humanPlayerSymbol === 'X') || (!xIsNext && humanPlayerSymbol === 'O')
           ? `Your Turn (${humanPlayerSymbol === 'X' ? playerXName : playerOName} - ${humanPlayerSymbol})`
-          : `${playerOName === "Easy AI" ? "Easy AI" : playerOName} (AI as ${aiPlayerSymbol}) is thinking...`;
+          : `${aiPlayerName} (AI as ${aiPlayerSymbol}) is thinking...`;
       }
       const nextPlayerName = xIsNext ? playerXName : playerOName;
       return `Next player: ${nextPlayerName} (${xIsNext ? 'X' : 'O'})`;
@@ -260,7 +272,7 @@ function App() {
   };
 
   const boardToDisplay = viewingHistoryGame ? (viewingHistoryGame.moves[historyStep]?.board || Array(9).fill(null)) : board;
-  const canClickBoard = !viewingHistoryGame && gameStatus === 'playing' && ! (gameMode === 'vsAI' && ((xIsNext && humanPlayerSymbol === 'O') || (!xIsNext && humanPlayerSymbol === 'X')));
+  const canClickBoard = !viewingHistoryGame && gameStatus === 'playing' && ! ((gameMode === 'vsEasyAI' || gameMode === 'vsMediumAI') && ((xIsNext && humanPlayerSymbol === 'O') || (!xIsNext && humanPlayerSymbol === 'X')));
   let lineToShow = viewingHistoryGame 
     ? (historyStep === viewingHistoryGame.moves.length - 1 && viewingHistoryGame.winner ? calculateWinner(viewingHistoryGame.moves[historyStep]?.board || [])?.line : null)
     : winningLine;
@@ -294,7 +306,7 @@ function App() {
                 id="playerXName"
                 value={playerXName}
                 onChange={(e) => setPlayerXName(e.target.value)}
-                disabled={!!viewingHistoryGame || (gameMode === 'vsAI' && humanPlayerSymbol === 'O')}
+                disabled={!!viewingHistoryGame || ((gameMode === 'vsEasyAI' || gameMode === 'vsMediumAI') && humanPlayerSymbol === 'O')}
                 className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
@@ -305,7 +317,7 @@ function App() {
                 id="playerOName"
                 value={playerOName}
                 onChange={(e) => setPlayerOName(e.target.value)}
-                disabled={!!viewingHistoryGame || gameMode === 'vsAI'}
+                disabled={!!viewingHistoryGame || gameMode === 'vsEasyAI' || gameMode === 'vsMediumAI'}
                 className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
@@ -317,22 +329,22 @@ function App() {
                 <div className="flex gap-2">
                     <button
                         onClick={() => handleSymbolChange('X')}
-                        disabled={currentMoves.length > 0 || (gameMode === 'vsAI' && humanPlayerSymbol === 'O' && xIsNext)}
-                        className={`py-2 px-4 rounded-lg transition-colors text-lg font-bold ${humanPlayerSymbol === 'X' ? 'bg-blue-500 text-white dark:bg-blue-600' : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'} ${(currentMoves.length > 0 || (gameMode === 'vsAI' && humanPlayerSymbol === 'O' && xIsNext)) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        disabled={currentMoves.length > 0 || ((gameMode === 'vsEasyAI' || gameMode === 'vsMediumAI') && humanPlayerSymbol === 'O' && xIsNext)}
+                        className={`py-2 px-4 rounded-lg transition-colors text-lg font-bold ${humanPlayerSymbol === 'X' ? 'bg-blue-500 text-white dark:bg-blue-600' : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'} ${(currentMoves.length > 0 || ((gameMode === 'vsEasyAI' || gameMode === 'vsMediumAI') && humanPlayerSymbol === 'O' && xIsNext)) ? 'opacity-50 cursor-not-allowed' : ''}`}
                         aria-label="Play as X"
                     >
                         Play as X
                     </button>
                     <button
                         onClick={() => handleSymbolChange('O')}
-                        disabled={currentMoves.length > 0 || (gameMode === 'vsAI' && humanPlayerSymbol === 'X' && !xIsNext)}
-                        className={`py-2 px-4 rounded-lg transition-colors text-lg font-bold ${humanPlayerSymbol === 'O' ? 'bg-red-500 text-white dark:bg-red-600' : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'} ${(currentMoves.length > 0 || (gameMode === 'vsAI' && humanPlayerSymbol === 'X' && !xIsNext)) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        disabled={currentMoves.length > 0 || ((gameMode === 'vsEasyAI' || gameMode === 'vsMediumAI') && humanPlayerSymbol === 'X' && !xIsNext)}
+                        className={`py-2 px-4 rounded-lg transition-colors text-lg font-bold ${humanPlayerSymbol === 'O' ? 'bg-red-500 text-white dark:bg-red-600' : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'} ${(currentMoves.length > 0 || ((gameMode === 'vsEasyAI' || gameMode === 'vsMediumAI') && humanPlayerSymbol === 'X' && !xIsNext)) ? 'opacity-50 cursor-not-allowed' : ''}`}
                         aria-label="Play as O"
                     >
                         Play as O
                     </button>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2 justify-center">
                     <button
                         onClick={() => handleGameModeChange('twoPlayer')}
                         disabled={currentMoves.length > 0}
@@ -341,11 +353,18 @@ function App() {
                         PvP
                     </button>
                     <button
-                        onClick={() => handleGameModeChange('vsAI')}
+                        onClick={() => handleGameModeChange('vsEasyAI')}
                         disabled={currentMoves.length > 0}
-                        className={`py-2 px-4 rounded-lg transition-colors ${gameMode === 'vsAI' ? 'bg-teal-500 text-white dark:bg-teal-600' : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'} ${currentMoves.length > 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        className={`py-2 px-4 rounded-lg transition-colors ${gameMode === 'vsEasyAI' ? 'bg-teal-500 text-white dark:bg-teal-600' : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'} ${currentMoves.length > 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                         PvE (Easy)
+                    </button>
+                    <button
+                        onClick={() => handleGameModeChange('vsMediumAI')}
+                        disabled={currentMoves.length > 0}
+                        className={`py-2 px-4 rounded-lg transition-colors ${gameMode === 'vsMediumAI' ? 'bg-orange-500 text-white dark:bg-orange-600' : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'} ${currentMoves.length > 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                        PvE (Medium)
                     </button>
                 </div>
             </div>
@@ -371,8 +390,8 @@ function App() {
           {/* Reset Game / New Game Button */}
           {(gameStatus === 'won' || gameStatus === 'draw') && !viewingHistoryGame && (
             <div className="text-center mb-6">
-              <button 
-                onClick={() => resetGame()} 
+              <button
+                onClick={() => resetGame(false)} 
                 className="py-2 px-6 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-lg flex items-center justify-center gap-2 mx-auto"
                 aria-label="New Game"
               >

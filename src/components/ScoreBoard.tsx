@@ -5,14 +5,37 @@ import { GameStats } from '../../types'; // Import GameStats
 interface ScoreBoardProps {
   stats: GameStats;
   playerXName: string;
-  playerOName: string; // Will be "Easy AI" in PvA mode
-  gameMode: 'twoPlayer' | 'vsAI';
+  playerOName: string; // Will be "Easy AI" or "Medium AI" in PvA modes
+  gameMode: 'twoPlayer' | 'vsEasyAI' | 'vsMediumAI';
+  humanPlayerSymbol: PlayerSymbol; // Needed to correctly display names in PvE
 }
 
-const ScoreBoard: React.FC<ScoreBoardProps> = ({ stats, playerXName, playerOName, gameMode }) => {
-  const currentModeStats = gameMode === 'twoPlayer' ? stats.pvp : stats.pva;
-  const playerXDisplayName = gameMode === 'twoPlayer' ? playerXName : `${playerXName} (You)`;
-  const playerODisplayName = gameMode === 'twoPlayer' ? playerOName : "Easy AI";
+const ScoreBoard: React.FC<ScoreBoardProps> = ({ stats, playerXName, playerOName, gameMode, humanPlayerSymbol }) => {
+  const isPvp = gameMode === 'twoPlayer';
+  const currentModeStats = isPvp ? stats.pvp : stats.pva;
+
+  // Determine display names based on game mode and human player symbol
+  let player1Name: string, player2Name: string;
+  let player1Score: number, player2Score: number;
+
+  if (isPvp) {
+    player1Name = playerXName;
+    player2Name = playerOName;
+    player1Score = (currentModeStats as GameStats['pvp']).X;
+    player2Score = (currentModeStats as GameStats['pvp']).O;
+  } else { // PvE modes
+    if (humanPlayerSymbol === 'X') {
+      player1Name = `${playerXName} (You)`;
+      player2Name = playerOName; // This will be "Easy AI" or "Medium AI"
+      player1Score = (currentModeStats as GameStats['pva']).playerXWins;
+      player2Score = (currentModeStats as GameStats['pva']).aiOWins;
+    } else { // Human is 'O'
+      player1Name = playerOName; // This will be "Easy AI" or "Medium AI"
+      player2Name = `${playerXName} (You)`;
+      player1Score = (currentModeStats as GameStats['pva']).aiOWins;
+      player2Score = (currentModeStats as GameStats['pva']).playerXWins;
+    }
+  }
 
   return (
     <div className="bg-gray-50 dark:bg-slate-800 p-4 rounded-lg border border-gray-200 dark:border-slate-700">
@@ -34,34 +57,32 @@ const ScoreBoard: React.FC<ScoreBoardProps> = ({ stats, playerXName, playerOName
         {/* Mode-Specific Stats */}
         <div className="mt-3 pt-3 border-t border-gray-200 dark:border-slate-700">
           <h3 className="text-sm font-semibold text-gray-600 dark:text-slate-400 mb-2">
-            {gameMode === 'twoPlayer' ? 'Player vs Player' : 'Player vs AI'}
+            {isPvp ? 'Player vs Player' : 'Player vs AI'}
           </h3>
 
-          {/* Player X / Human Player */}
+          {/* Player 1 (X or Human/AI) */}
           <div className="flex justify-between items-center p-2 bg-indigo-50 dark:bg-indigo-900/50 rounded mb-2">
             <div className="flex items-center gap-2">
-              <User className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+              {isPvp || humanPlayerSymbol === 'X' ? <User className="h-4 w-4 text-indigo-600 dark:text-indigo-400" /> : <Bot className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />}
               <span className="font-medium text-indigo-700 dark:text-indigo-300">
-                {playerXDisplayName}
+                {player1Name}
               </span>
             </div>
             <span className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
-              {gameMode === 'twoPlayer' ? (currentModeStats as GameStats['pvp']).X : (currentModeStats as GameStats['pva']).playerXWins}
+              {player1Score}
             </span>
           </div>
           
-          {/* Player O / AI */}
+          {/* Player 2 (O or AI/Human) */}
           <div className="flex justify-between items-center p-2 bg-purple-50 dark:bg-purple-900/50 rounded mb-2">
             <div className="flex items-center gap-2">
-              {gameMode === 'twoPlayer' ? 
-                <User className="h-4 w-4 text-purple-600 dark:text-purple-400" /> : 
-                <Bot className="h-4 w-4 text-purple-600 dark:text-purple-400" />}
+              {isPvp || humanPlayerSymbol === 'O' ? <User className="h-4 w-4 text-purple-600 dark:text-purple-400" /> : <Bot className="h-4 w-4 text-purple-600 dark:text-purple-400" />}
               <span className="font-medium text-purple-700 dark:text-purple-300">
-                {playerODisplayName}
+                {player2Name}
               </span>
             </div>
             <span className="text-lg font-bold text-purple-600 dark:text-purple-400">
-              {gameMode === 'twoPlayer' ? (currentModeStats as GameStats['pvp']).O : (currentModeStats as GameStats['pva']).aiOWins}
+              {player2Score}
             </span>
           </div>
           
