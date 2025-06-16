@@ -1,74 +1,65 @@
-# Tic Tac Toe Game
+# Tic Tac Toe
 
-A modern implementation of the classic Tic Tac Toe game built with React, TypeScript, and Tailwind CSS.
+A sleek, modern implementation of the classic Tic Tac Toe game built with React, TypeScript, and Tailwind CSS.
 
 ## Features
 
-- Fully functional Tic Tac Toe game
-- Score tracking for X, O, and draws
-- Game history with timestamps
-- Highlights winning combinations
-- Reset game and statistics
-- Responsive design for all devices
+- Fully functional game with X and O
+- Persistent score tracking for X, O, and draws
+- Timestamped game history
+- Highlighted winning combinations
+- Reset game board and statistics
+- Responsive across all screen sizes
 
-## Technologies Used
+## Tech Stack
 
-- **React 18**
-- **TypeScript**
-- **Tailwind CSS**
-- **Vite**
-- **Vitest**
-- **Lucide React** for icons
+- **React 18**  
+- **TypeScript**  
+- **Tailwind CSS**  
+- **Vite**  
+- **Vitest**  
+- **Lucide React** (icons)  
 
-## Game Logic
+## Game Rules
 
-The game implements the following rules:
-
-1. X goes first, followed by O
-2. The first player to get 3 of their marks in a row (horizontally, vertically, or diagonally) wins
-3. If all 9 squares are filled and no player has 3 marks in a row, the game is a draw
-4. Winning combinations are highlighted
-5. Game statistics are tracked and displayed
+1. X always starts, then players alternate.
+2. First to align three marks (horizontal, vertical, or diagonal) wins.
+3. If all squares fill without a winner, the game ends in a draw.
+4. Winning line is visually highlighted.
+5. All results are tracked and displayed.
 
 ## Getting Started
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) (v14 or higher)
-- npm or yarn
+- [Node.js](https://nodejs.org/) v14 or higher  
+- npm or Yarn  
 
 ### Installation
 
-1. **Clone the repository:**
-
+1. Clone the repo  
    ```bash
    git clone https://github.com/chintanboghara/Tic-Tac-Toe.git
    cd Tic-Tac-Toe
-   ```
+   ````
 
-2. **Install dependencies:**
+2. Install dependencies
 
    ```bash
    npm install
    # or
    yarn
    ```
-
-3. **Start the development server:**
+3. Launch the dev server
 
    ```bash
    npm run dev
    # or
    yarn dev
    ```
+4. Open [http://localhost:5173](http://localhost:5173) in your browser.
 
-4. **Open your browser:**
-
-   Navigate to [http://localhost:5173](http://localhost:5173)
-
-## Building for Production
-
-To create a production build:
+## Production Build
 
 ```bash
 npm run build
@@ -76,75 +67,50 @@ npm run build
 yarn build
 ```
 
-The production build artifacts will be output to the `dist/` directory.
+Build artifacts will be output to the `dist/` directory.
 
-## Running with Docker
+## Docker
 
-Run the application using Docker. Use the multi-stage Dockerfile provided in the project.
+### Build & Run
 
-1. **Build the Docker image:**
+1. Build the image
 
    ```bash
    docker build -t tic-tac-toe .
    ```
-
-2. **Run the Docker container:**
+2. Run the container
 
    ```bash
    docker run -p 80:80 tic-tac-toe
    ```
 
-The application should now be accessible at [http://localhost](http://localhost).
+Visit [http://localhost](http://localhost).
 
-## Running with Docker Compose
+### Docker Compose
 
-Using Docker Compose, you can use the provided `docker-compose.yml` file:
-
-1. **Build and start the service:**
-
-   ```bash
-   docker-compose up --build
-   ```
-
-2. **Run in detached mode:**
-
-   ```bash
-   docker-compose up -d --build
-   ```
+```bash
+docker-compose up --build
+# or, to run in detached mode:
+docker-compose up -d --build
+```
 
 ## Infrastructure as Code (Terraform)
 
-This project uses Terraform to manage and provision infrastructure, likely on a cloud provider such as AWS (inferred from typical Terraform usage and file names like `backend.tf`). The Terraform setup helps in automating the deployment environment for the Tic Tac Toe application.
+Terraform scripts automate your cloud resources.
 
-Key files in the `Terraform/` directory:
-- `main.tf`: Contains the main set of configurations for the infrastructure.
-- `variables.tf`: Defines variables used in the Terraform configurations.
-- `outputs.tf`: Specifies the output values after infrastructure provisioning.
-- `backend.tf`: Configures the Terraform backend, often used for state storage (e.g., AWS S3).
+Key files in `Terraform/`:
 
-### Common Terraform Commands
+* `main.tf` — Core infrastructure definitions
+* `variables.tf` — Input variable definitions
+* `outputs.tf` — Provisioning outputs
+* `backend.tf` — Remote state configuration
 
-1.  **Initialize Terraform:**
-    Navigate to the `Terraform/` directory and run:
-    ```bash
-    terraform init
-    ```
+### Common Commands
 
-2.  **Plan Changes:**
-    (Optional but recommended) Preview the changes Terraform will make:
-    ```bash
-    terraform plan
-    ```
-
-3.  **Apply Changes:**
-    Provision or update the infrastructure:
-    ```bash
-    terraform apply
-    ```
-    You will be prompted to confirm the changes before they are applied.
-
-4.  **Destroy Infrastructure:**
-    (Use with caution) Remove the infrastructure managed by Terraform:
-    ```bash
-    terraform destroy
-    ```
+```bash
+cd Terraform
+terraform init    # Initialize
+terraform plan    # Preview changes
+terraform apply   # Apply changes
+terraform destroy # Tear down resources
+```
