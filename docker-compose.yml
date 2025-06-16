@@ -1,10 +1,12 @@
-version: "3.8"
+version: "3.8"  # Specify the Docker Compose file format version
 
 services:
   tic-tac-toe:
     build:
-      context: .
-      dockerfile: Dockerfile  # Update the path if your Dockerfile is located elsewhere
+      context: .  # Use the current directory as the build context
+      dockerfile: Dockerfile  # Path to the Dockerfile (update if located elsewhere)
     ports:
-      - "80:80"
-    restart: always
+      - "80:80"  # Map port 80 of the host to port 80 of the container
+    restart: always  # Always restart the container if it stops
+    environment:
+      - NODE_ENV=production  # Set the environment variable for production
