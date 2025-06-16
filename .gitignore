@@ -1,5 +1,5 @@
-# ----- Logs & Runtime Data -----
-logs/
+# Logs
+logs
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -7,46 +7,18 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# ----- Process & Cache Files -----
-pids/
-*.pid
-*.seed
-*.pid.lock
-coverage/          # Code coverage output
-.npm/              # Optional npm cache directory
-.eslintcache       # ESLint cache file
+node_modules
+dist
+dist-ssr
+*.local
 
-# ----- Dependency Directories -----
-node_modules/
-
-# ----- Build Outputs -----
-dist/
-dist-ssr/
-
-# ----- Environment Files -----
-# Exclude environment files; if you want to share examples, add an exception.
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# ----- Editor, IDE & System Files -----
-.vscode/
-.idea/
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
 .DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
-
-# ----- OS Generated Files -----
-Thumbs.db
-
-# Terraform files
-*.tfvars
-*.tfstate
-*.tfstate.*
-.terraform/
-.terraform.lock.hcl
